@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -32,12 +33,10 @@ func NewConnCfg(host string, port int) ConnCfg {
 	}
 }
 
-type MgoConn struct {
-	client *mongo.Client
-}
-
-func Connect(ctx context.Context, cfg ConnCfg) error {
+func Connect(parent context.Context, cfg ConnCfg) error {
 	clientOptions := options.Client().ApplyURI(cfg.GenUrl())
+	// ctx, cancel TODO:关闭监听待实现
+	ctx, _ := context.WithCancel(parent)
 	// Connect to MongoDB
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
@@ -48,7 +47,27 @@ func Connect(ctx context.Context, cfg ConnCfg) error {
 		return err
 	}
 	conn := new(MgoConn)
+	conn.ctx = ctx
 	conn.client = client
-	connMgr.AddConn(conn)
+	getMgr().AddConn(conn)
 	return nil
+}
+
+type MgoConn struct {
+	ctx    context.Context
+	client *mongo.Client
+}
+
+// 判定数据库database中是否存在集合collection
+func (c *MgoConn) hasCollection(database, collection string) bool {
+	list, err := c.client.Database(database).ListCollectionNames(c.ctx, bson.M{})
+	if err != nil {
+		return false
+	}
+	for _, cName := range list {
+		if cName == collection {
+			return true
+		}
+	}
+	return false
 }
