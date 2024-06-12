@@ -9,7 +9,7 @@ func HasCollection(database, collection string) bool {
 }
 
 // 创建索引
-func CreateIndex(database, collection string, index MgoIndex) {
+func CreateIndex(database, collection string, index Indexs) {
 	getMgr().CreateIndex(database, collection, index)
 }
 

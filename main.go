@@ -21,7 +21,7 @@ func main() {
 
 	if !mgo.HasCollection(database, testCollection) {
 		log.Printf("判定数据库[%s]中的集合[%s]不存在!", database, testCollection)
-		mgo.CreateIndex(database, testCollection, mgo.MgoIndex{
+		mgo.CreateIndex(database, testCollection, mgo.Indexs{
 			{"id", 1},
 		})
 	}

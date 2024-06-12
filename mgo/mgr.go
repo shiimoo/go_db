@@ -37,7 +37,7 @@ func (m *mgr) HasCollection(database, collection string) bool {
 }
 
 // CreateIndex 建立索引
-func (m *mgr) CreateIndex(database, collection string, index MgoIndex) {
+func (m *mgr) CreateIndex(database, collection string, index Indexs) {
 	m.GetConn().CreateIndex(database, collection, index)
 }
 
