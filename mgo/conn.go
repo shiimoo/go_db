@@ -71,3 +71,14 @@ func (c *MgoConn) hasCollection(database, collection string) bool {
 	}
 	return false
 }
+
+// MgoIndex mongo 索引 {{字段名:1/-1}, {关键字:值}}
+type MgoIndex bson.D // todo 自定义的索引结构可以优化刻度性
+
+// 创建索引
+func (c *MgoConn) CreateIndex(database, collection string, index MgoIndex) {
+	set := c.client.Database(database).Collection(collection)
+	fmt.Println(set.Indexes().CreateOne(c.ctx, mongo.IndexModel{
+		Keys: index,
+	}))
+}

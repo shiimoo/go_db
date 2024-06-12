@@ -11,12 +11,6 @@ type mgr struct {
 	useCount int
 	// 链接池列表
 	pool []*MgoConn
-	// 指定数据库名
-	database string
-}
-
-func (m *mgr) SetDatabase(database string) {
-	m.database = database
 }
 
 func (m *mgr) Count() int {
@@ -37,12 +31,26 @@ func (m *mgr) GetConn() *MgoConn {
 	return m.pool[index]
 }
 
+// HasCollection 判定数据库database中是否存在集合collection
+func (m *mgr) HasCollection(database, collection string) bool {
+	return m.GetConn().hasCollection(database, collection)
+}
+
+// CreateIndex 建立索引
+func (m *mgr) CreateIndex(database, collection string, index MgoIndex) {
+	m.GetConn().CreateIndex(database, collection, index)
+}
+
+// ---------------- TODO: 工厂方法迁移
+
+// 工厂方法
 func newMgr() *mgr {
 	mgr := new(mgr)
 	mgr.pool = make([]*MgoConn, 0)
 	return mgr
 }
 
+// 单例
 var soleMgr *mgr = newMgr()
 
 func getMgr() *mgr {

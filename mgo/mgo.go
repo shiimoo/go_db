@@ -1,13 +1,16 @@
 package mgo
 
-func SetDatabase(database string) {
-	getMgr().SetDatabase(database)
+// TODO: 同意通过Mgr调度, 该文件仅提供默认的实际操作接口
+// TODO：mgr的默认数据库在创建时进行指定？亦或者回调操作? 该方案待定
+
+// HasCollection 判定数据库database中是否存在集合collection
+func HasCollection(database, collection string) bool {
+	return getMgr().HasCollection(database, collection)
 }
 
-// 判定数据库database中是否存在集合collection
-func HasCollection(collection string) bool {
-	m := getMgr()
-	return m.GetConn().hasCollection(m.database, collection)
+// 创建索引
+func CreateIndex(database, collection string, index MgoIndex) {
+	getMgr().CreateIndex(database, collection, index)
 }
 
 // 增删改查
