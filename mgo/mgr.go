@@ -84,7 +84,22 @@ func (m *mgr) InsertOne(database, collection string, data any) error {
 	return m.GetConn().InsertOne(database, collection, data)
 }
 
-// ----------------
+// InsertN 批量插入数据
+func (m *mgr) InsertN(database, collection string, datas []any) error {
+	return m.GetConn().InsertN(database, collection, datas)
+}
+
+// FindAll 全部加载
+func (m *mgr) FindAll(database, collection string) error {
+	return m.GetConn().FindAll(database, collection)
+}
+
+// FinaOne 单个加载
+// Find
+
+// 增 ：查删改
+
+// 池管理
 
 // 工厂方法, key值在外层进行检查和校准
 func newMgr(parent context.Context, key string) *mgr {

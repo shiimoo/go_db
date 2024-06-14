@@ -11,4 +11,6 @@ var (
 	ErrMgoConnectErr = TempErr("mgoMgr create conn Err : %s")
 	// mongo 插入数据错误
 	ErrMgoInsertErr = TempErr("mgoMgr insert data to database[%s], collection[%s], err: %s")
+	// mongo 查询错误
+	ErrMgoFindErr = TempErr("mgoMgr finda data to database[%s], collection[%s], err: %s")
 )

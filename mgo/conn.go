@@ -70,3 +70,28 @@ func (c *MgoConn) InsertOne(database, collection string, data any) error {
 }
 
 // InsertN 批量插入数据
+func (c *MgoConn) InsertN(database, collection string, datas []any) error {
+	set := c.client.Database(database).Collection(collection)
+	_, err := set.InsertMany(c.ctx, datas)
+	if err != nil {
+		return dberr.NewErr(dberr.ErrMgoInsertErr, database, collection, err)
+	}
+	return nil
+}
+
+// FindAll 全部加载
+func (c *MgoConn) FindAll(database, collection string) error {
+	set := c.client.Database(database).Collection(collection)
+	cur, err := set.Find(c.ctx, bson.D{})
+	if err != nil {
+		return dberr.NewErr(dberr.ErrMgoFindErr, database, collection, err)
+	}
+	for cur.Next(c.ctx) {
+		var res bson.M
+		if err := cur.Decode((&res)); err != nil {
+			return err // TODO: 错误规范
+		}
+		fmt.Println(res)
+	}
+	return nil
+}

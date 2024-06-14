@@ -40,9 +40,25 @@ func mgoText() {
 		log.Printf("%s.%s不存在, 重建索引!\n", database, testCollection)
 	}
 
-	// 插入数据测试
-	testData := map[string]any{"id": 1, "name": "testname"}
-	if err := dbMgr.InsertOne(database, testCollection, testData); err != nil {
-		log.Fatalln(err)
+	// 插入数据测试 单条数据
+	// testData := map[string]any{"id": 1, "name": "testname"}
+	// if err := dbMgr.InsertOne(database, testCollection, testData); err != nil {
+	// 	log.Fatalln(err)
+	// }
+
+	// 插入数据测试 多条数据
+	// testDatas := make([]any, 0)
+	// ti := time.Now().Unix()
+	// for i := 1; i < 10; i++ {
+	// 	testDatas = append(testDatas, map[string]any{"id": ti*1000 + int64(i), "name": "testname"})
+	// }
+	// if err := dbMgr.InsertN(database, testCollection, testDatas); err != nil {
+	// 	log.Fatalln(err)
+	// }
+
+	// 查询测试(all)
+	if err := dbMgr.FindAll(database, testCollection); err != nil {
+		log.Fatalln(1, err)
 	}
+	// 查询测试(单/过滤)
 }
