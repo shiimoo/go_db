@@ -35,5 +35,8 @@ func IsSameErr(errA, errB error) bool {
 
 // NewErr 创建error
 func NewErr(temp TempErr, vals ...any) error {
+	if vals == nil { // 没有参数时直接用模板
+		return temp
+	}
 	return Err{temp, vals}
 }

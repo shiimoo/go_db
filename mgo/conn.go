@@ -4,53 +4,29 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/shiimoo/godb/dberr"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type ConnCfg struct {
-	// 数据库访问地址
-	host string
-	// 数据库端口
-	port int
-}
-
-func (cfg ConnCfg) GenUrl() string {
-	return fmt.Sprintf("mongodb://%s:%d", cfg.host, cfg.port)
-}
-
-func NewConnCfg(host string, port int) ConnCfg {
-	if host == "" {
-		host = "localhost"
-	}
-	if port <= 0 {
-		port = 27017
-	}
-	return ConnCfg{
-		host: host,
-		port: port,
-	}
-}
-
-func Connect(parent context.Context, cfg ConnCfg) error {
-	clientOptions := options.Client().ApplyURI(cfg.GenUrl())
+func NewConn(parent context.Context, url string) (*MgoConn, error) {
+	cOpts := options.Client().ApplyURI(url)
 	// ctx, cancel TODO:关闭监听待实现
 	ctx, _ := context.WithCancel(parent)
 	// Connect to MongoDB
-	client, err := mongo.Connect(ctx, clientOptions)
+	client, err := mongo.Connect(ctx, cOpts)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	err = client.Ping(ctx, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	conn := new(MgoConn)
 	conn.ctx = ctx
 	conn.client = client
-	getMgr().AddConn(conn)
-	return nil
+	return conn, nil
 }
 
 type MgoConn struct {
@@ -72,19 +48,25 @@ func (c *MgoConn) hasCollection(database, collection string) bool {
 	return false
 }
 
-// 单一索引
-type index struct {
-	Key string // 字段名
-	Val any    // 值
-}
-
-// Indexs mongo 索引(复刻结构primitive.E) {{字段名:1/-1}, {关键字:值}}
-type Indexs []index
+// Indexs mongo 索引结构重写(复刻结构primitive.E) {{字段名:1/-1}, {关键字:值}}
+type Indexs bson.D
 
 // 创建索引
-func (c *MgoConn) CreateIndex(database, collection string, index Indexs) {
+func (c *MgoConn) CreateIndex(database, collection string, indexs Indexs) {
 	set := c.client.Database(database).Collection(collection)
 	fmt.Println(set.Indexes().CreateOne(c.ctx, mongo.IndexModel{
-		Keys: index,
+		Keys: indexs,
 	}))
 }
+
+// InsertOne 插入单挑数据
+func (c *MgoConn) InsertOne(database, collection string, data any) error {
+	set := c.client.Database(database).Collection(collection)
+	_, err := set.InsertOne(c.ctx, data)
+	if err != nil {
+		return dberr.NewErr(dberr.ErrMgoInsertErr, database, collection, err)
+	}
+	return nil
+}
+
+// InsertN 批量插入数据
