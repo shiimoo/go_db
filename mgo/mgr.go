@@ -104,9 +104,7 @@ func (m *mgr) FindOne(database, collection string, filter any) ([]byte, error) {
 	return m.GetConn().FindOne(database, collection, filter)
 }
 
-// FinaOne 单个加载
-
-// 增 ：查删改
+// 增查 ：删改
 
 // 池管理
 

@@ -68,6 +68,8 @@ func mgoText() {
 	// 	log.Fatalln(err)
 	// }
 	// 查询测试(单)
+
+	// data, err := dbMgr.FindOne(database, testCollection, bson.M{"id": 1718348565001})
 	data, err := dbMgr.FindOne(database, testCollection, bson.M{"name": "testname"})
 	if err != nil {
 		log.Fatalln(err)

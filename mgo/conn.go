@@ -114,3 +114,7 @@ func (c *MgoConn) FindOne(database, collection string, filter any) ([]byte, erro
 	set := c.client.Database(database).Collection(collection)
 	return set.FindOne(c.ctx, filter).Raw()
 }
+
+// Delete 删除
+// DeletaAll 全部删除(清空)
+// DeleteOne 删除单个
