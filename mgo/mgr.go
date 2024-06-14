@@ -89,13 +89,22 @@ func (m *mgr) InsertN(database, collection string, datas []any) error {
 	return m.GetConn().InsertN(database, collection, datas)
 }
 
-// FindAll 全部加载
-func (m *mgr) FindAll(database, collection string) error {
+// Find 加载数据 filter一般是bson.D
+func (m *mgr) Find(database, collection string, filter any, num int64) ([][]byte, error) {
+	return m.GetConn().Find(database, collection, filter, num)
+}
+
+// FindAll 查找全部数据
+func (m *mgr) FindAll(database, collection string) ([][]byte, error) {
 	return m.GetConn().FindAll(database, collection)
 }
 
+// FindOne 查找单个数据
+func (m *mgr) FindOne(database, collection string, filter any) ([]byte, error) {
+	return m.GetConn().FindOne(database, collection, filter)
+}
+
 // FinaOne 单个加载
-// Find
 
 // 增 ：查删改
 

@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/shiimoo/godb/mgo"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 var ()
@@ -56,9 +57,20 @@ func mgoText() {
 	// 	log.Fatalln(err)
 	// }
 
+	// 查询测试(过滤)
+	// dataList, err := dbMgr.Find(database, testCollection, bson.M{"name": "testname"}, 2)
+	// if err != nil {
+	// 	log.Fatalln(err)
+	// }
 	// 查询测试(all)
-	if err := dbMgr.FindAll(database, testCollection); err != nil {
-		log.Fatalln(1, err)
+	// dataList, err := dbMgr.FindAll(database, testCollection)
+	// if err != nil {
+	// 	log.Fatalln(err)
+	// }
+	// 查询测试(单)
+	data, err := dbMgr.FindOne(database, testCollection, bson.M{"name": "testname"})
+	if err != nil {
+		log.Fatalln(err)
 	}
-	// 查询测试(单/过滤)
+	log.Println(bson.Raw(data).String())
 }

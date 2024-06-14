@@ -79,19 +79,38 @@ func (c *MgoConn) InsertN(database, collection string, datas []any) error {
 	return nil
 }
 
-// FindAll 全部加载
-func (c *MgoConn) FindAll(database, collection string) error {
+// Find 加载数据 filter一般是bson.D
+func (c *MgoConn) Find(database, collection string, filter any, num int64) ([][]byte, error) {
+	if filter == nil {
+		filter = bson.D{}
+	}
+	opt := options.Find()
+	if num > 0 {
+		opt.SetLimit(num)
+	}
 	set := c.client.Database(database).Collection(collection)
-	cur, err := set.Find(c.ctx, bson.D{})
+	cur, err := set.Find(c.ctx, filter, opt)
 	if err != nil {
-		return dberr.NewErr(dberr.ErrMgoFindErr, database, collection, err)
+		return nil, dberr.NewErr(dberr.ErrMgoFindErr, database, collection, err)
 	}
+
+	result := make([][]byte, 0)
 	for cur.Next(c.ctx) {
-		var res bson.M
-		if err := cur.Decode((&res)); err != nil {
-			return err // TODO: 错误规范
-		}
-		fmt.Println(res)
+		result = append(result, cur.Current)
 	}
-	return nil
+	return result, nil
+}
+
+// FindAll 全部加载
+func (c *MgoConn) FindAll(database, collection string) ([][]byte, error) {
+	return c.Find(database, collection, bson.D{}, 0)
+}
+
+// FindOne 查找单个数据
+func (c *MgoConn) FindOne(database, collection string, filter any) ([]byte, error) {
+	if filter == nil {
+		filter = bson.D{}
+	}
+	set := c.client.Database(database).Collection(collection)
+	return set.FindOne(c.ctx, filter).Raw()
 }
