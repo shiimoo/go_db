@@ -3,7 +3,6 @@ package mgo
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/shiimoo/godb/dberr"
 	"go.mongodb.org/mongo-driver/bson"
@@ -66,7 +65,7 @@ func (c *MgoConn) InsertOne(database, collection string, data any) error {
 	set := c.client.Database(database).Collection(collection)
 	_, err := set.InsertOne(c.ctx, data)
 	if err != nil {
-		return dberr.NewErr(dberr.ErrMgoInsertErr, database, collection, err)
+		return dberr.NewErr(ErrMgoInsertErr, err, database, collection, data)
 	}
 	return nil
 }
@@ -76,7 +75,7 @@ func (c *MgoConn) InsertN(database, collection string, datas []any) error {
 	set := c.client.Database(database).Collection(collection)
 	_, err := set.InsertMany(c.ctx, datas)
 	if err != nil {
-		return dberr.NewErr(dberr.ErrMgoInsertErr, database, collection, err)
+		return dberr.NewErr(ErrMgoInsertErr, err, database, collection, datas)
 	}
 	return nil
 }
@@ -93,7 +92,7 @@ func (c *MgoConn) Find(database, collection string, filter any, num int64) ([][]
 	set := c.client.Database(database).Collection(collection)
 	cur, err := set.Find(c.ctx, filter, opt)
 	if err != nil {
-		return nil, dberr.NewErr(dberr.ErrMgoFindErr, database, collection, err)
+		return nil, dberr.NewErr(ErrMgoFindErr, err, database, collection, filter, num)
 	}
 
 	result := make([][]byte, 0)
@@ -114,7 +113,24 @@ func (c *MgoConn) FindOne(database, collection string, filter any) ([]byte, erro
 		filter = bson.D{}
 	}
 	set := c.client.Database(database).Collection(collection)
-	return set.FindOne(c.ctx, filter).Raw()
+	bs, err := set.FindOne(c.ctx, filter).Raw()
+	if err != nil {
+		return nil, dberr.NewErr(ErrMgoFindErr, err, database, collection, filter, 1)
+	}
+	return bs, nil
+}
+
+// FindByObjId 根据mongo生成的ObjectId进行查找,等同于FindOne
+func (c *MgoConn) FindByObjId(database, collection, oId string) ([]byte, error) {
+	_id, err := primitive.ObjectIDFromHex(oId)
+	if err != nil {
+		return nil, dberr.NewErr(ErrMgoObjectErr, oId, err)
+	}
+
+	filter := bson.D{
+		{Key: "_id", Value: _id},
+	}
+	return c.FindOne(database, collection, filter)
 }
 
 // Delete 删除
@@ -123,24 +139,16 @@ func (c *MgoConn) Delete(database, collection string, filter any) (int, error) {
 		filter = bson.D{}
 	}
 	set := c.client.Database(database).Collection(collection)
-	result, err := set.DeleteOne(c.ctx, filter)
+	result, err := set.DeleteMany(c.ctx, filter)
 	if err != nil {
-		return 0, err
+		return 0, dberr.NewErr(ErrMgoDeleteErr, err, database, collection, filter)
 	}
 	return int(result.DeletedCount), nil
 }
 
 // DeletaAll 全部删除(清空)
 func (c *MgoConn) DeleteAll(database, collection string, filter any) (int, error) {
-	if filter == nil {
-		filter = bson.D{}
-	}
-	set := c.client.Database(database).Collection(collection)
-	result, err := set.DeleteMany(c.ctx, filter)
-	if err != nil {
-		return 0, err
-	}
-	return int(result.DeletedCount), nil
+	return c.Delete(database, collection, nil)
 }
 
 func (c *MgoConn) DeleteOne(database, collection string, filter any) (int, error) {
@@ -150,9 +158,22 @@ func (c *MgoConn) DeleteOne(database, collection string, filter any) (int, error
 	set := c.client.Database(database).Collection(collection)
 	result, err := set.DeleteOne(c.ctx, filter)
 	if err != nil {
-		return 0, err
+		return 0, dberr.NewErr(ErrMgoDeleteErr, err, database, collection, filter)
 	}
 	return int(result.DeletedCount), nil
+}
+
+// DeleteByObjId 根据mongo生成的ObjectId进行查找,等同于DeleteOne
+func (c *MgoConn) DeleteByObjId(database, collection, oId string) (int, error) {
+	_id, err := primitive.ObjectIDFromHex(oId)
+	if err != nil {
+		return 0, dberr.NewErr(ErrMgoObjectErr, oId, err)
+	}
+
+	filter := bson.D{
+		{Key: "_id", Value: _id},
+	}
+	return c.DeleteOne(database, collection, filter)
 }
 
 // UpdateOne 单一更新
@@ -162,16 +183,16 @@ func (c *MgoConn) UpdateOne(database, collection string, filter, data any) error
 	}
 	set := c.client.Database(database).Collection(collection)
 	if _, err := set.UpdateOne(c.ctx, filter, bson.D{{Key: "$set", Value: data}}); err != nil {
-		return err
+		return dberr.NewErr(ErrMgoUpdateErr, err, database, collection, filter, data)
 	}
 	return nil
 }
 
-// UpdateByObjId 根据mongo生成的ObjectId进行更新
+// UpdateByObjId 根据mongo生成的ObjectId进行更新,等同于UpdateOne
 func (c *MgoConn) UpdateByObjId(database, collection, oId string, data any) error {
 	_id, err := primitive.ObjectIDFromHex(oId)
 	if err != nil {
-		return dberr.NewErr(dberr.ErrMgoObjectErr, oId, err)
+		return dberr.NewErr(ErrMgoObjectErr, oId, err)
 	}
 
 	filter := bson.D{
@@ -187,7 +208,7 @@ func (c *MgoConn) Update(database, collection string, filter, data any) error {
 	}
 	set := c.client.Database(database).Collection(collection)
 	if _, err := set.UpdateMany(c.ctx, filter, bson.D{{Key: "$set", Value: data}}); err != nil {
-		return err
+		return dberr.NewErr(ErrMgoUpdateErr, err, database, collection, filter, data)
 	}
 	return nil
 }
@@ -199,6 +220,21 @@ func (c *MgoConn) ReplaceOne(database, collection string, filter, replacement an
 	}
 	set := c.client.Database(database).Collection(collection)
 
-	log.Println(set.ReplaceOne(c.ctx, filter, replacement))
+	if _, err := set.ReplaceOne(c.ctx, filter, replacement); err != nil {
+		return dberr.NewErr(ErrMgoReplaceErr, database, err, collection, filter, replacement)
+	}
 	return nil
+}
+
+// ReplaceByObjId 根据mongo生成的ObjectId进行更新,等同于ReplaceOne
+func (c *MgoConn) ReplaceByObjId(database, collection string, oId string, replacement any) error {
+	_id, err := primitive.ObjectIDFromHex(oId)
+	if err != nil {
+		return dberr.NewErr(ErrMgoObjectErr, oId, err)
+	}
+
+	filter := bson.D{
+		{Key: "_id", Value: _id},
+	}
+	return c.ReplaceOne(database, collection, filter, replacement)
 }

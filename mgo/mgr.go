@@ -39,12 +39,12 @@ func (m *mgr) Seturl(host string, port int) {
 // 创建失败的参数
 func (m *mgr) Connect(num int) (int, error) {
 	if num <= 0 {
-		return 0, dberr.NewErr(dberr.ErrMgoConnNum, "num must > 0")
+		return 0, dberr.NewErr(ErrMgoConnNum, "num must > 0")
 	}
 	for i := 0; i < num; i++ {
 		conn, err := NewConn(m.ctx, m.url)
 		if err != nil {
-			return i, dberr.NewErr(dberr.ErrMgoConnectErr, err)
+			return i, dberr.NewErr(ErrMgoConnectErr, err)
 		}
 		m.AddConn(conn)
 	}
@@ -104,6 +104,11 @@ func (m *mgr) FindOne(database, collection string, filter any) ([]byte, error) {
 	return m.GetConn().FindOne(database, collection, filter)
 }
 
+// FindByObjId 根据mongo生成的ObjectId进行查找,等同于FindOne
+func (m *mgr) FindByObjId(database, collection, oId string) ([]byte, error) {
+	return m.GetConn().FindByObjId(database, collection, oId)
+}
+
 // Delete 删除数据
 func (m *mgr) Delete(database, collection string, filter any) (int, error) {
 	return m.GetConn().Delete(database, collection, filter)
@@ -117,6 +122,11 @@ func (m *mgr) DeleteAll(database, collection string, filter any) (int, error) {
 // DeleteOne 删除数据(单个)
 func (m *mgr) DeleteOne(database, collection string, filter any) (int, error) {
 	return m.GetConn().DeleteOne(database, collection, filter)
+}
+
+// FindByObjId 根据mongo生成的ObjectId进行查找,等同于FindOne
+func (m *mgr) DeleteByObjId(database, collection, oId string) (int, error) {
+	return m.GetConn().DeleteByObjId(database, collection, oId)
 }
 
 // 增查 ：改
@@ -162,7 +172,7 @@ var mp struct {
 func GetMgr(parent context.Context, key string) (*mgr, error) {
 	key = strings.TrimSpace(key)
 	if key == "" {
-		return nil, dberr.NewErr(dberr.ErrMgoMgrKey, "key is \"\"")
+		return nil, dberr.NewErr(ErrMgoMgrKey, "key is \"\"")
 	}
 	var kMgr *mgr
 	v, ok := mp.Load(key)
