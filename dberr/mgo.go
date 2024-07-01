@@ -13,4 +13,6 @@ var (
 	ErrMgoInsertErr = TempErr("mgoMgr insert data to database[%s], collection[%s], err: %s")
 	// mongo 查询错误
 	ErrMgoFindErr = TempErr("mgoMgr finda data to database[%s], collection[%s], err: %s")
+	// mongo ObjectId错误
+	ErrMgoObjectErr = TempErr("ObjectId Hex String[%s] Invalid, err: %s")
 )

@@ -120,6 +120,20 @@ func (m *mgr) DeleteOne(database, collection string, filter any) (int, error) {
 }
 
 // 增查 ：改
+// UpdateOne 更新数据(单个)
+func (m *mgr) UpdateOne(database, collection string, filter, update any) error {
+	return m.GetConn().UpdateOne(database, collection, filter, update)
+}
+
+// UpdateByObjId 根据mongo生成的ObjectId进行更新
+func (m *mgr) UpdateByObjId(database, collection, oId string, data any) error {
+	return m.GetConn().UpdateByObjId(database, collection, oId, data)
+}
+
+// UpdateOne 更新数据(单个)
+func (m *mgr) Update(database, collection string, filter, update any) error {
+	return m.GetConn().Update(database, collection, filter, update)
+}
 
 // 池管理
 

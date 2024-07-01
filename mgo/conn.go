@@ -6,6 +6,7 @@ import (
 
 	"github.com/shiimoo/godb/dberr"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -130,6 +131,9 @@ func (c *MgoConn) Delete(database, collection string, filter any) (int, error) {
 
 // DeletaAll 全部删除(清空)
 func (c *MgoConn) DeleteAll(database, collection string, filter any) (int, error) {
+	if filter == nil {
+		filter = bson.D{}
+	}
 	set := c.client.Database(database).Collection(collection)
 	result, err := set.DeleteMany(c.ctx, filter)
 	if err != nil {
@@ -139,6 +143,9 @@ func (c *MgoConn) DeleteAll(database, collection string, filter any) (int, error
 }
 
 func (c *MgoConn) DeleteOne(database, collection string, filter any) (int, error) {
+	if filter == nil {
+		filter = bson.D{}
+	}
 	set := c.client.Database(database).Collection(collection)
 	result, err := set.DeleteOne(c.ctx, filter)
 	if err != nil {
@@ -147,4 +154,41 @@ func (c *MgoConn) DeleteOne(database, collection string, filter any) (int, error
 	return int(result.DeletedCount), nil
 }
 
-// DeleteOne 删除单个
+// UpdateOne 单一更新
+func (c *MgoConn) UpdateOne(database, collection string, filter, data any) error {
+	if filter == nil {
+		filter = bson.D{}
+	}
+	set := c.client.Database(database).Collection(collection)
+	if _, err := set.UpdateOne(c.ctx, filter, bson.D{{Key: "$set", Value: data}}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// UpdateByObjId 根据mongo生成的ObjectId进行更新
+func (c *MgoConn) UpdateByObjId(database, collection, oId string, data any) error {
+	_id, err := primitive.ObjectIDFromHex(oId)
+	if err != nil {
+		return dberr.NewErr(dberr.ErrMgoObjectErr, oId, err)
+	}
+
+	filter := bson.D{
+		{Key: "_id", Value: _id},
+	}
+	return c.UpdateOne(database, collection, filter, data)
+}
+
+// UpdateN 批量更新
+func (c *MgoConn) Update(database, collection string, filter, data any) error {
+	if filter == nil {
+		filter = bson.D{}
+	}
+	set := c.client.Database(database).Collection(collection)
+	if _, err := set.UpdateMany(c.ctx, filter, bson.D{{Key: "$set", Value: data}}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// replace ?

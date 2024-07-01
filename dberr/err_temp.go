@@ -6,7 +6,3 @@ type TempErr string
 func (t TempErr) Error() string {
 	return string(t)
 }
-
-var (
-	Text = TempErr("TempErr Text :%v")
-)
