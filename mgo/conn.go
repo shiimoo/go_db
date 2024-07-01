@@ -116,5 +116,35 @@ func (c *MgoConn) FindOne(database, collection string, filter any) ([]byte, erro
 }
 
 // Delete 删除
+func (c *MgoConn) Delete(database, collection string, filter any) (int, error) {
+	if filter == nil {
+		filter = bson.D{}
+	}
+	set := c.client.Database(database).Collection(collection)
+	result, err := set.DeleteOne(c.ctx, filter)
+	if err != nil {
+		return 0, err
+	}
+	return int(result.DeletedCount), nil
+}
+
 // DeletaAll 全部删除(清空)
+func (c *MgoConn) DeleteAll(database, collection string, filter any) (int, error) {
+	set := c.client.Database(database).Collection(collection)
+	result, err := set.DeleteMany(c.ctx, filter)
+	if err != nil {
+		return 0, err
+	}
+	return int(result.DeletedCount), nil
+}
+
+func (c *MgoConn) DeleteOne(database, collection string, filter any) (int, error) {
+	set := c.client.Database(database).Collection(collection)
+	result, err := set.DeleteOne(c.ctx, filter)
+	if err != nil {
+		return 0, err
+	}
+	return int(result.DeletedCount), nil
+}
+
 // DeleteOne 删除单个

@@ -104,7 +104,22 @@ func (m *mgr) FindOne(database, collection string, filter any) ([]byte, error) {
 	return m.GetConn().FindOne(database, collection, filter)
 }
 
-// 增查 ：删改
+// Delete 删除数据
+func (m *mgr) Delete(database, collection string, filter any) (int, error) {
+	return m.GetConn().Delete(database, collection, filter)
+}
+
+// DeleteAll 删除全部数据(清空数据)
+func (m *mgr) DeleteAll(database, collection string, filter any) (int, error) {
+	return m.GetConn().DeleteAll(database, collection, filter)
+}
+
+// DeleteOne 删除数据(单个)
+func (m *mgr) DeleteOne(database, collection string, filter any) (int, error) {
+	return m.GetConn().DeleteOne(database, collection, filter)
+}
+
+// 增查 ：改
 
 // 池管理
 

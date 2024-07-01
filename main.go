@@ -69,10 +69,19 @@ func mgoText() {
 	// }
 	// 查询测试(单)
 
-	// data, err := dbMgr.FindOne(database, testCollection, bson.M{"id": 1718348565001})
-	data, err := dbMgr.FindOne(database, testCollection, bson.M{"name": "testname"})
+	// data, err := dbMgr.FindOne(database, testCollection, bson.M{"id": 1})
+	datas, err := dbMgr.Find(database, testCollection, bson.M{"id": 1}, -1)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	log.Println(bson.Raw(data).String())
+	for _, data := range datas {
+		log.Println("数据库查询成功", bson.Raw(data).String())
+	}
+
+	// 删除测试
+	delCount, err := dbMgr.DeleteAll(database, testCollection, bson.M{"id": 1})
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.Println("数据库删除成功", delCount)
 }
