@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/shiimoo/godb/mgo"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 var ()
@@ -90,5 +91,12 @@ func mgoText() {
 	// 	log.Fatalln(err)
 	// }
 	// log.Println("数据库更新成功")
+
+	// Replace 替换s
+	err = dbMgr.ReplaceOne(database, testCollection, bson.M{"name": "shimo"}, map[string]any{"other_name": "shimo----shimo"})
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.Println("数据库替换成功")
 
 }

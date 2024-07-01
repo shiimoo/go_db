@@ -3,6 +3,7 @@ package mgo
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/shiimoo/godb/dberr"
 	"go.mongodb.org/mongo-driver/bson"
@@ -191,4 +192,13 @@ func (c *MgoConn) Update(database, collection string, filter, data any) error {
 	return nil
 }
 
-// replace ?
+// ReplaceOne 整个文档内容替换(除了ObjectId)
+func (c *MgoConn) ReplaceOne(database, collection string, filter, replacement any) error {
+	if filter == nil {
+		filter = bson.D{}
+	}
+	set := c.client.Database(database).Collection(collection)
+
+	log.Println(set.ReplaceOne(c.ctx, filter, replacement))
+	return nil
+}

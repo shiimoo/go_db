@@ -135,6 +135,10 @@ func (m *mgr) Update(database, collection string, filter, update any) error {
 	return m.GetConn().Update(database, collection, filter, update)
 }
 
+func (m *mgr) ReplaceOne(database, collection string, filter, replacement any) error {
+	return m.GetConn().ReplaceOne(database, collection, filter, replacement)
+}
+
 // 池管理
 
 // 工厂方法, key值在外层进行检查和校准
