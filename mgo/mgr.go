@@ -3,6 +3,7 @@ package mgo
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 
@@ -11,7 +12,8 @@ import (
 
 type mgr struct {
 	sync.RWMutex
-	ctx context.Context
+	ctx    context.Context
+	cancel context.CancelFunc
 
 	key string // 唯一标识(id)
 	url string // mongo链接
@@ -21,6 +23,8 @@ type mgr struct {
 	// 链接池列表
 	pool []*MgoConn
 }
+
+// ***** 基础直接操作 *****
 
 // Seturl 设置mongo链接参数
 func (m *mgr) Seturl(host string, port int) {
@@ -46,7 +50,7 @@ func (m *mgr) Connect(num int) (int, error) {
 		if err != nil {
 			return i, dberr.NewErr(ErrMgoConnectErr, err)
 		}
-		m.AddConn(conn)
+		m.addConn(conn)
 	}
 	return m.Count(), nil
 }
@@ -55,13 +59,13 @@ func (m *mgr) Count() int {
 	return len(m.pool)
 }
 
-func (m *mgr) AddConn(conn *MgoConn) {
+func (m *mgr) addConn(conn *MgoConn) {
 	m.Lock()
 	defer m.Unlock()
 	m.pool = append(m.pool, conn)
 }
 
-func (m *mgr) GetConn() *MgoConn {
+func (m *mgr) getConn() *MgoConn {
 	m.RLock()
 	defer m.RUnlock()
 	m.useCount += 1
@@ -69,94 +73,120 @@ func (m *mgr) GetConn() *MgoConn {
 	return m.pool[index]
 }
 
+// ***** 外部业务操作(安全沙盒) *****
+
 // HasCollection 判定数据库database中是否存在集合collection
 func (m *mgr) HasCollection(database, collection string) bool {
-	return m.GetConn().hasCollection(database, collection)
+	return m.getConn().hasCollection(database, collection)
 }
 
 // CreateIndex 建立索引
 func (m *mgr) CreateIndex(database, collection string, indexs Indexs) {
-	m.GetConn().CreateIndex(database, collection, indexs)
+	m.getConn().CreateIndex(database, collection, indexs)
 }
 
 // InsertOne 插入单挑数据
 func (m *mgr) InsertOne(database, collection string, data any) error {
-	return m.GetConn().InsertOne(database, collection, data)
+	return m.getConn().InsertOne(database, collection, data)
 }
 
 // InsertN 批量插入数据
 func (m *mgr) InsertN(database, collection string, datas []any) error {
-	return m.GetConn().InsertN(database, collection, datas)
+	return m.getConn().InsertN(database, collection, datas)
 }
 
 // Find 加载数据 filter一般是bson.D
 func (m *mgr) Find(database, collection string, filter any, num int64) ([][]byte, error) {
-	return m.GetConn().Find(database, collection, filter, num)
+	return m.getConn().Find(database, collection, filter, num)
 }
 
 // FindAll 查找全部数据
 func (m *mgr) FindAll(database, collection string) ([][]byte, error) {
-	return m.GetConn().FindAll(database, collection)
+	return m.getConn().FindAll(database, collection)
 }
 
 // FindOne 查找单个数据
 func (m *mgr) FindOne(database, collection string, filter any) ([]byte, error) {
-	return m.GetConn().FindOne(database, collection, filter)
+	return m.getConn().FindOne(database, collection, filter)
 }
 
 // FindByObjId 根据mongo生成的ObjectId进行查找,等同于FindOne
 func (m *mgr) FindByObjId(database, collection, oId string) ([]byte, error) {
-	return m.GetConn().FindByObjId(database, collection, oId)
+	return m.getConn().FindByObjId(database, collection, oId)
 }
 
 // Delete 删除数据
 func (m *mgr) Delete(database, collection string, filter any) (int, error) {
-	return m.GetConn().Delete(database, collection, filter)
+	return m.getConn().Delete(database, collection, filter)
 }
 
 // DeleteAll 删除全部数据(清空数据)
 func (m *mgr) DeleteAll(database, collection string, filter any) (int, error) {
-	return m.GetConn().DeleteAll(database, collection, filter)
+	return m.getConn().DeleteAll(database, collection, filter)
 }
 
 // DeleteOne 删除数据(单个)
 func (m *mgr) DeleteOne(database, collection string, filter any) (int, error) {
-	return m.GetConn().DeleteOne(database, collection, filter)
+	return m.getConn().DeleteOne(database, collection, filter)
 }
 
 // FindByObjId 根据mongo生成的ObjectId进行查找,等同于FindOne
 func (m *mgr) DeleteByObjId(database, collection, oId string) (int, error) {
-	return m.GetConn().DeleteByObjId(database, collection, oId)
+	return m.getConn().DeleteByObjId(database, collection, oId)
 }
 
 // 增查 ：改
 // UpdateOne 更新数据(单个)
 func (m *mgr) UpdateOne(database, collection string, filter, update any) error {
-	return m.GetConn().UpdateOne(database, collection, filter, update)
+	return m.getConn().UpdateOne(database, collection, filter, update)
 }
 
 // UpdateByObjId 根据mongo生成的ObjectId进行更新
 func (m *mgr) UpdateByObjId(database, collection, oId string, data any) error {
-	return m.GetConn().UpdateByObjId(database, collection, oId, data)
+	return m.getConn().UpdateByObjId(database, collection, oId, data)
 }
 
 // UpdateOne 更新数据(单个)
 func (m *mgr) Update(database, collection string, filter, update any) error {
-	return m.GetConn().Update(database, collection, filter, update)
+	return m.getConn().Update(database, collection, filter, update)
 }
 
+// ReplaceOne 整体替换
 func (m *mgr) ReplaceOne(database, collection string, filter, replacement any) error {
-	return m.GetConn().ReplaceOne(database, collection, filter, replacement)
+	return m.getConn().ReplaceOne(database, collection, filter, replacement)
+}
+
+// ***** Service API *****
+
+func (m *mgr) Start() {
+	for {
+
+	}
+	go m.waitClose()
+	// 消息队列
+}
+
+func (m *mgr) waitClose() {
+	<-m.ctx.Done()
+	m._close()
+}
+
+func (m *mgr) Close() {
+	m.cancel()
+}
+
+func (m *mgr) _close() {
+	log.Println("mgr Done")
 }
 
 // 池管理
 
 // 工厂方法, key值在外层进行检查和校准
 func newMgr(parent context.Context, key string) *mgr {
-	// ctx, cancel TODO:关闭监听待实现
-	ctx, _ := context.WithCancel(parent)
+	ctx, cancel := context.WithCancel(parent)
 	mgr := new(mgr)
 	mgr.ctx = ctx
+	mgr.cancel = cancel
 	mgr.key = key
 	mgr.pool = make([]*MgoConn, 0)
 	return mgr
