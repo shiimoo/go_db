@@ -16,7 +16,28 @@ import (
 )
 
 const (
-	hasCollection = "hasCollection" // 是否拥有集合
+	cmdHasCollection = "hasCollection" // 判定数据库database中是否存在集合collectio
+	cmdCreateIndex   = "createIndex"   // 创建索引
+
+	cmdInsertN   = "insertN"   // 批量插入数据
+	cmdInsertOne = "insertOne" // 插入单挑数据
+
+	cmdFind        = "find"        // 加载数据
+	cmdFindAll     = "findAll"     // 加载全部数据
+	cmdFindOne     = "findOne"     // 加载单个数据
+	cmdFindByObjId = "findByObjId" // 根据mongo生成的ObjectId进行查找,等同于findOne
+
+	cmdDelete        = "delete"        // 删除数据
+	cmdDeleteAll     = "deleteAll"     // 全部删除(清空)
+	cmdDeleteOne     = "deleteOne"     // 删除1个
+	cmdDeleteByObjId = "deleteByObjId" // 根据mongo生成的ObjectId进行查找,等同于deleteOne
+
+	cmdUpdate        = "update"        // 批量更新
+	cmdUpdateOne     = "updateOne"     // 单一更新
+	cmdUpdateByObjId = "updateByObjId" // 根据mongo生成的ObjectId进行更新,等同于updateOne
+
+	cmdReplaceOne     = "replaceOne"     // 整个文档内容替换(除了ObjectId)
+	cmdReplaceByObjId = "replaceByObjId" // 根据mongo生成的ObjectId进行更新,等同于replaceOne
 )
 
 type opFunc func(otherParams ...any) *opResult
@@ -39,7 +60,23 @@ func NewConn(parent context.Context, url string) (*MgoConn, error) {
 	conn.opChan = make(chan *op, 1000) // 长度为1000的处理队列
 	// 注册处理方法
 	conn.opFuncs = map[string]opFunc{
-		hasCollection: conn.hasCollection,
+		cmdHasCollection:  conn.hasCollection,
+		cmdCreateIndex:    conn.createIndex,
+		cmdInsertN:        conn.insertN,
+		cmdInsertOne:      conn.insertOne,
+		cmdFind:           conn.find,
+		cmdFindAll:        conn.findAll,
+		cmdFindOne:        conn.findOne,
+		cmdFindByObjId:    conn.findByObjId,
+		cmdDelete:         conn.delete,
+		cmdDeleteAll:      conn.deleteAll,
+		cmdDeleteOne:      conn.deleteOne,
+		cmdDeleteByObjId:  conn.deleteByObjId,
+		cmdUpdate:         conn.update,
+		cmdUpdateOne:      conn.updateOne,
+		cmdUpdateByObjId:  conn.updateByObjId,
+		cmdReplaceOne:     conn.replaceOne,
+		cmdReplaceByObjId: conn.replaceByObjId,
 	}
 	return conn, nil
 }
@@ -53,33 +90,23 @@ type MgoConn struct {
 	opChan  chan *op // 操作参数
 }
 
-// ***** 数据业务操作 ****
+// ***** 数据操作 ****
 
-// 操作方法索引转换
-func (c *MgoConn) toOp(data any) string {
-	var err error
-	op, ok := data.(string)
-	if !ok {
-		err = dberr.NewErr(
-			ErrToOpErr,
-			fmt.Sprintf("need type string; but op[%v] type is %s", data, reflect.TypeOf(data)),
-		)
-	} else if len(strings.TrimSpace(op)) == 0 {
-		err = dberr.NewErr(
-			ErrToOpErr,
-			fmt.Sprintf("op[%s] length is zero", data),
-		)
-	} else if _, found := c.opFuncs[op]; !found {
-		err = dberr.NewErr(
-			ErrToOpErr,
-			fmt.Sprintf("op[%s] not found", data),
-		)
-	}
+// 判定数据库database中是否存在集合collection
+func (c *MgoConn) _hasCollection(database, collection string, _ ...any) bool {
+	list, err := c.client.Database(database).ListCollectionNames(c.ctx, bson.M{})
 	if err != nil {
-		panic(err)
+		return false
 	}
-	return op
+	for _, cName := range list {
+		if cName == collection {
+			return true
+		}
+	}
+	return false
 }
+
+// ***** 数据业务操作 ****
 
 // 数据库名转换
 func (c *MgoConn) toDatabase(data any) string {
@@ -136,61 +163,75 @@ func (c *MgoConn) parseParams(params ...any) (database string, collection string
 	if err != nil {
 		panic(err)
 	}
-	return c.toDatabase(params[0]), c.toDatabase(params[1]), params[2:]
+	return c.toDatabase(params[0]), c.toCollection(params[1]), params[2:]
 }
 
 // 判定数据库database中是否存在集合collection
-func (c *MgoConn) hasCollection(otherParams ...any) *opResult {
-	database, collection, otherParams := c.parseParams(otherParams...)
+func (c *MgoConn) hasCollection(params ...any) *opResult {
+	database, collection, params := c.parseParams(params...)
 	result := newOpResult()
-	result.addResult(c._hasCollection(database, collection, otherParams...))
+	result.addResult(c._hasCollection(database, collection, params...))
 	return result
 }
 
-// 判定数据库database中是否存在集合collection
-func (c *MgoConn) _hasCollection(database, collection string, params ...any) bool {
-	list, err := c.client.Database(database).ListCollectionNames(c.ctx, bson.M{})
-	if err != nil {
-		return false
-	}
-	for _, cName := range list {
-		if cName == collection {
-			return true
-		}
-	}
-	return false
-}
-
 // 创建索引
-func (c *MgoConn) CreateIndex(database, collection string, indexs Indexs) {
+func (c *MgoConn) createIndex(params ...any) *opResult {
+	database, collection, params := c.parseParams(params...)
+	result := newOpResult()
+
+	indexs := params[0]
 	set := c.client.Database(database).Collection(collection)
+	// todo 去除无用打印
 	fmt.Println(set.Indexes().CreateOne(c.ctx, mongo.IndexModel{
 		Keys: indexs,
 	}))
+
+	return result
 }
 
-// InsertOne 插入单挑数据
-func (c *MgoConn) InsertOne(database, collection string, data any) error {
-	set := c.client.Database(database).Collection(collection)
-	_, err := set.InsertOne(c.ctx, data)
-	if err != nil {
-		return dberr.NewErr(ErrMgoInsertErr, err, database, collection, data)
-	}
-	return nil
-}
+// 批量插入数据
+func (c *MgoConn) insertN(params ...any) *opResult {
+	database, collection, params := c.parseParams(params...)
+	result := newOpResult()
 
-// InsertN 批量插入数据
-func (c *MgoConn) InsertN(database, collection string, datas []any) error {
+	datas := params[0].([]any)
 	set := c.client.Database(database).Collection(collection)
 	_, err := set.InsertMany(c.ctx, datas)
 	if err != nil {
-		return dberr.NewErr(ErrMgoInsertErr, err, database, collection, datas)
+		result.err = dberr.NewErr(ErrMgoInsertErr, err, database, collection, datas)
 	}
-	return nil
+
+	return result
 }
 
-// Find 加载数据 filter一般是bson.D
-func (c *MgoConn) Find(database, collection string, filter any, num int64) ([][]byte, error) {
+// 插入单挑数据
+func (c *MgoConn) insertOne(params ...any) *opResult {
+	database, collection, params := c.parseParams(params...)
+	result := newOpResult()
+
+	data := params[0]
+	set := c.client.Database(database).Collection(collection)
+	_, err := set.InsertOne(c.ctx, data)
+	if err != nil {
+		result.err = dberr.NewErr(ErrMgoInsertErr, err, database, collection, data)
+	}
+
+	return result
+}
+
+// 加载数据
+func (c *MgoConn) find(params ...any) *opResult {
+	database, collection, params := c.parseParams(params...)
+	result := newOpResult()
+
+	var filter any
+	if len(params) > 0 {
+		filter = params[0]
+	}
+	var num int64
+	if len(params) > 1 {
+		num = params[1].(int64)
+	}
 	if filter == nil {
 		filter = bson.D{}
 	}
@@ -201,151 +242,236 @@ func (c *MgoConn) Find(database, collection string, filter any, num int64) ([][]
 	set := c.client.Database(database).Collection(collection)
 	cur, err := set.Find(c.ctx, filter, opt)
 	if err != nil {
-		return nil, dberr.NewErr(ErrMgoFindErr, err, database, collection, filter, num)
+		result.err = dberr.NewErr(ErrMgoFindErr, err, database, collection, filter, num)
+	} else {
+		datas := make([][]byte, 0)
+		for cur.Next(c.ctx) {
+			datas = append(datas, []byte(cur.Current))
+		}
+		result.addResult(datas)
 	}
 
-	result := make([][]byte, 0)
-	for cur.Next(c.ctx) {
-		result = append(result, cur.Current)
+	return result
+}
+
+// 加载全部数据
+func (c *MgoConn) findAll(params ...any) *opResult {
+	database, collection, _ := c.parseParams(params...)
+	return c.find(database, collection, bson.D{}, int64(0))
+}
+
+// 查找单个数据
+func (c *MgoConn) findOne(params ...any) *opResult {
+	database, collection, params := c.parseParams(params...)
+	result := newOpResult()
+
+	var filter any
+	if len(params) > 0 {
+		filter = params[0]
 	}
-	return result, nil
-}
-
-// FindAll 全部加载
-func (c *MgoConn) FindAll(database, collection string) ([][]byte, error) {
-	return c.Find(database, collection, bson.D{}, 0)
-}
-
-// FindOne 查找单个数据
-func (c *MgoConn) FindOne(database, collection string, filter any) ([]byte, error) {
 	if filter == nil {
 		filter = bson.D{}
 	}
 	set := c.client.Database(database).Collection(collection)
 	bs, err := set.FindOne(c.ctx, filter).Raw()
 	if err != nil {
-		return nil, dberr.NewErr(ErrMgoFindErr, err, database, collection, filter, 1)
+		result.err = dberr.NewErr(ErrMgoFindErr, err, database, collection, filter, 1)
+	} else {
+		result.addResult([]byte(bs))
 	}
-	return bs, nil
+	return result
 }
 
 // FindByObjId 根据mongo生成的ObjectId进行查找,等同于FindOne
-func (c *MgoConn) FindByObjId(database, collection, oId string) ([]byte, error) {
+func (c *MgoConn) findByObjId(params ...any) *opResult {
+	database, collection, params := c.parseParams(params...)
+	result := newOpResult()
+
+	oId := params[0].(string)
 	_id, err := primitive.ObjectIDFromHex(oId)
 	if err != nil {
-		return nil, dberr.NewErr(ErrMgoObjectErr, oId, err)
+		result.err = dberr.NewErr(ErrMgoObjectErr, oId, err)
+		return result
 	}
 
 	filter := bson.D{
 		{Key: "_id", Value: _id},
 	}
-	return c.FindOne(database, collection, filter)
+	return c.findOne(database, collection, filter)
 }
 
-// Delete 删除
-func (c *MgoConn) Delete(database, collection string, filter any) (int, error) {
+// 删除
+func (c *MgoConn) delete(params ...any) *opResult {
+	database, collection, params := c.parseParams(params...)
+	result := newOpResult()
+
+	var filter any
+	if len(params) > 0 {
+		filter = params[0]
+	}
 	if filter == nil {
 		filter = bson.D{}
 	}
 	set := c.client.Database(database).Collection(collection)
-	result, err := set.DeleteMany(c.ctx, filter)
+	delResult, err := set.DeleteMany(c.ctx, filter)
 	if err != nil {
-		return 0, dberr.NewErr(ErrMgoDeleteErr, err, database, collection, filter)
+		result.err = dberr.NewErr(ErrMgoDeleteErr, err, database, collection, filter)
+	} else {
+		result.addResult(int(delResult.DeletedCount))
 	}
-	return int(result.DeletedCount), nil
+	return result
 }
 
 // DeletaAll 全部删除(清空)
-func (c *MgoConn) DeleteAll(database, collection string, filter any) (int, error) {
-	return c.Delete(database, collection, nil)
+func (c *MgoConn) deleteAll(params ...any) *opResult {
+	database, collection, _ := c.parseParams(params...)
+	return c.delete(database, collection)
 }
 
-func (c *MgoConn) DeleteOne(database, collection string, filter any) (int, error) {
+func (c *MgoConn) deleteOne(params ...any) *opResult {
+	database, collection, params := c.parseParams(params...)
+	result := newOpResult()
+
+	var filter any
+	if len(params) > 0 {
+		filter = params[0]
+	}
 	if filter == nil {
 		filter = bson.D{}
 	}
 	set := c.client.Database(database).Collection(collection)
-	result, err := set.DeleteOne(c.ctx, filter)
+	delRes, err := set.DeleteOne(c.ctx, filter)
 	if err != nil {
-		return 0, dberr.NewErr(ErrMgoDeleteErr, err, database, collection, filter)
+		result.err = dberr.NewErr(ErrMgoDeleteErr, err, database, collection, filter)
+	} else {
+		result.addResult(int(delRes.DeletedCount))
 	}
-	return int(result.DeletedCount), nil
+	return result
 }
 
 // DeleteByObjId 根据mongo生成的ObjectId进行查找,等同于DeleteOne
-func (c *MgoConn) DeleteByObjId(database, collection, oId string) (int, error) {
+func (c *MgoConn) deleteByObjId(params ...any) *opResult {
+
+	database, collection, params := c.parseParams(params...)
+	result := newOpResult()
+
+	oId := params[0].(string)
 	_id, err := primitive.ObjectIDFromHex(oId)
 	if err != nil {
-		return 0, dberr.NewErr(ErrMgoObjectErr, oId, err)
+		result.err = dberr.NewErr(ErrMgoObjectErr, oId, err)
+		return result
 	}
 
 	filter := bson.D{
 		{Key: "_id", Value: _id},
 	}
-	return c.DeleteOne(database, collection, filter)
-}
-
-// UpdateOne 单一更新
-func (c *MgoConn) UpdateOne(database, collection string, filter, data any) error {
-	if filter == nil {
-		filter = bson.D{}
-	}
-	set := c.client.Database(database).Collection(collection)
-	if _, err := set.UpdateOne(c.ctx, filter, bson.D{{Key: "$set", Value: data}}); err != nil {
-		return dberr.NewErr(ErrMgoUpdateErr, err, database, collection, filter, data)
-	}
-	return nil
-}
-
-// UpdateByObjId 根据mongo生成的ObjectId进行更新,等同于UpdateOne
-func (c *MgoConn) UpdateByObjId(database, collection, oId string, data any) error {
-	_id, err := primitive.ObjectIDFromHex(oId)
-	if err != nil {
-		return dberr.NewErr(ErrMgoObjectErr, oId, err)
-	}
-
-	filter := bson.D{
-		{Key: "_id", Value: _id},
-	}
-	return c.UpdateOne(database, collection, filter, data)
+	return c.deleteOne(database, collection, filter)
 }
 
 // UpdateN 批量更新
-func (c *MgoConn) Update(database, collection string, filter, data any) error {
+func (c *MgoConn) update(params ...any) *opResult {
+	database, collection, params := c.parseParams(params...)
+	result := newOpResult()
+
+	var filter any
+	if len(params) > 0 {
+		filter = params[0]
+	}
 	if filter == nil {
 		filter = bson.D{}
+	}
+	var data any
+	if len(params) > 1 {
+		data = params[1]
 	}
 	set := c.client.Database(database).Collection(collection)
 	if _, err := set.UpdateMany(c.ctx, filter, bson.D{{Key: "$set", Value: data}}); err != nil {
-		return dberr.NewErr(ErrMgoUpdateErr, err, database, collection, filter, data)
+		result.err = dberr.NewErr(ErrMgoUpdateErr, err, database, collection, filter, data)
 	}
-	return nil
+	return result
 }
 
-// ReplaceOne 整个文档内容替换(除了ObjectId)
-func (c *MgoConn) ReplaceOne(database, collection string, filter, replacement any) error {
+// 单一更新
+func (c *MgoConn) updateOne(params ...any) *opResult {
+	database, collection, params := c.parseParams(params...)
+	result := newOpResult()
+
+	var filter any
+	if len(params) > 0 {
+		filter = params[0]
+	}
 	if filter == nil {
 		filter = bson.D{}
+	}
+	var data any
+	if len(params) > 1 {
+		data = params[1]
+	}
+	set := c.client.Database(database).Collection(collection)
+	if _, err := set.UpdateOne(c.ctx, filter, bson.D{{Key: "$set", Value: data}}); err != nil {
+		result.err = dberr.NewErr(ErrMgoUpdateErr, err, database, collection, filter, data)
+	}
+	return result
+}
+
+// 根据mongo生成的ObjectId进行更新,等同于UpdateOne
+func (c *MgoConn) updateByObjId(params ...any) *opResult {
+	database, collection, params := c.parseParams(params...)
+	result := newOpResult()
+
+	oId := params[0].(string)
+	_id, err := primitive.ObjectIDFromHex(oId)
+	if err != nil {
+		result.err = dberr.NewErr(ErrMgoObjectErr, oId, err)
+		return result
+	}
+
+	filter := bson.D{
+		{Key: "_id", Value: _id},
+	}
+	return c.updateOne(database, collection, filter, params[1])
+}
+
+// 整个文档内容替换(除了ObjectId)
+func (c *MgoConn) replaceOne(params ...any) *opResult {
+	database, collection, params := c.parseParams(params...)
+	result := newOpResult()
+
+	var filter any
+	if len(params) > 0 {
+		filter = params[0]
+	}
+	if filter == nil {
+		filter = bson.D{}
+	}
+	var replacement any
+	if len(params) > 1 {
+		replacement = params[1]
 	}
 	set := c.client.Database(database).Collection(collection)
 
 	if _, err := set.ReplaceOne(c.ctx, filter, replacement); err != nil {
-		return dberr.NewErr(ErrMgoReplaceErr, database, err, collection, filter, replacement)
+		result.err = dberr.NewErr(ErrMgoReplaceErr, database, err, collection, filter, replacement)
 	}
-	return nil
+	return result
 }
 
-// ReplaceByObjId 根据mongo生成的ObjectId进行更新,等同于ReplaceOne
-func (c *MgoConn) ReplaceByObjId(database, collection string, oId string, replacement any) error {
+// 根据mongo生成的ObjectId进行更新,等同于ReplaceOne
+func (c *MgoConn) replaceByObjId(params ...any) *opResult {
+	database, collection, params := c.parseParams(params...)
+	result := newOpResult()
+
+	oId := params[0].(string)
 	_id, err := primitive.ObjectIDFromHex(oId)
 	if err != nil {
-		return dberr.NewErr(ErrMgoObjectErr, oId, err)
+		result.err = dberr.NewErr(ErrMgoObjectErr, oId, err)
+		return result
 	}
 
 	filter := bson.D{
 		{Key: "_id", Value: _id},
 	}
-	return c.ReplaceOne(database, collection, filter, replacement)
+	return c.replaceOne(database, collection, filter, params[1])
 }
 
 // ***** ServerAPI
@@ -369,10 +495,17 @@ func (c *MgoConn) _start() {
 			c.closeCallBack()
 			return
 		case opObj := <-c.opChan:
-			if err := savectrl.SaveBox(func() {
-				// todo cmd 检查?
-				handler := c.opFuncs[opObj.cmd]
-				opObj.resultAccept <- handler(opObj.args...)
+			if err := savectrl.SaveBox(func() error {
+				handler, found := c.opFuncs[opObj.cmd]
+				if found {
+					opObj.resultAccept <- handler(opObj.args...)
+				} else {
+					return dberr.NewErr(
+						ErrToOpErr,
+						fmt.Sprintf("op[%s] not found", opObj.cmd),
+					)
+				}
+				return nil
 			}); err != nil {
 				// todo 错误日志打印
 				log.Println(err)

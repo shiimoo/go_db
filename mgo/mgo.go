@@ -7,36 +7,10 @@ import (
 // Indexs mongo 索引结构重写(复刻结构primitive.E) {{字段名:1/-1}, {关键字:值}}
 type Indexs bson.D
 
-// 参数列表
-func newOpArgs() opArgs {
-	return make(opArgs, 0)
-}
-
-type opArgs []any
-
-// 尾部追加
-func (o *opArgs) append(args ...any) {
-	*o = append(*o, args...)
-}
-
-// 头部出栈
-func (o *opArgs) pop() any {
-	if len(*o) == 0 {
-		return nil
-	}
-	ele := (*o)[0]
-	*o = (*o)[1:]
-	return ele
-}
-
-// 头部出栈
-func (o *opArgs) list() []any {
-	return *o
-}
-
+// 命令结果
 type opResult struct {
 	err     error // 错误信息
-	results []any // 结果参数
+	results []any // 结果参数 todo 改成唯一参数，去掉[]
 }
 
 func newOpResult() *opResult {
@@ -67,17 +41,12 @@ func newOp(cmd string) *op {
 	return o
 }
 
-// 尾部追加
+// 追加参数
 func (o *op) append(args ...any) {
 	o.args = append(o.args, args...)
 }
 
 // 参数出栈
-func (o *op) popArgs() any {
-	if len(o.args) == 0 {
-		return nil
-	}
-	ele := o.args[0]
-	o.args = o.args[1:]
-	return ele
+func (o *op) getResult() *opResult {
+	return <-o.resultAccept
 }

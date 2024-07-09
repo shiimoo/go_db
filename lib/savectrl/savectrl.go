@@ -9,7 +9,7 @@ import (
 	"github.com/shiimoo/godb/dberr"
 )
 
-func SaveBox(handler func()) (err error) {
+func SaveBox(handler func() error) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			errInfos := []string{fmt.Sprintf("%v", r)}
@@ -17,6 +17,5 @@ func SaveBox(handler func()) (err error) {
 			err = dberr.NewErr(ErrSaveBoxPanic, strings.Join(append(errInfos, stackList...), "\n"))
 		}
 	}()
-	handler()
-	return err
+	return handler()
 }

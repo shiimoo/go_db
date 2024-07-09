@@ -44,17 +44,6 @@ func TestCreateIndex(t *testing.T) {
 	}
 }
 
-// TestInsertOne 插入数据测试:单条数据
-func TestInsertOne(t *testing.T) {
-	_getMgr()
-
-	testData := map[string]any{"id": 1, "name": "testname"}
-	if err := dbMgr.InsertOne(database, testCollection, testData); err != nil {
-		log.Fatalln(err)
-	}
-	log.Println("插入数据成功")
-}
-
 // TestInsertN 插入数据测试:多条数据
 func TestInsertN(t *testing.T) {
 	_getMgr()
@@ -63,9 +52,20 @@ func TestInsertN(t *testing.T) {
 	testDatas := make([]any, 0)
 	ti := time.Now().Unix()
 	for i := 1; i < 10; i++ {
-		testDatas = append(testDatas, map[string]any{"id": ti*1000 + int64(i), "name": "testname"})
+		testDatas = append(testDatas, map[string]any{"id": ti*1000 + int64(i), "name": "testnameN"})
 	}
 	if err := dbMgr.InsertN(database, testCollection, testDatas); err != nil {
+		log.Fatalln(err)
+	}
+	log.Println("插入数据成功")
+}
+
+// TestInsertOne 插入数据测试:单条数据
+func TestInsertOne(t *testing.T) {
+	_getMgr()
+
+	testData := map[string]any{"id": 1, "name": "testname"}
+	if err := dbMgr.InsertOne(database, testCollection, testData); err != nil {
 		log.Fatalln(err)
 	}
 	log.Println("插入数据成功")
@@ -115,7 +115,7 @@ func TestFindOne(t *testing.T) {
 func TestFindByObjId(t *testing.T) {
 	_getMgr()
 
-	data, err := dbMgr.FindByObjId(database, testCollection, "666beb15926cb7bca675d6f0")
+	data, err := dbMgr.FindByObjId(database, testCollection, "668d08a9f3a1692e27e463a6")
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -137,7 +137,7 @@ func TestDelete(t *testing.T) {
 func TestDeleteOne(t *testing.T) {
 	_getMgr()
 
-	delCount, err := dbMgr.DeleteOne(database, testCollection, bson.M{"name": "testname"})
+	delCount, err := dbMgr.DeleteOne(database, testCollection, bson.M{"name": "testnameN"})
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -148,7 +148,7 @@ func TestDeleteOne(t *testing.T) {
 func TestDeleteAll(t *testing.T) {
 	_getMgr()
 
-	delCount, err := dbMgr.DeleteAll(database, testCollection, bson.M{"name": "testname"})
+	delCount, err := dbMgr.DeleteAll(database, testCollection, bson.M{"name": "testnameN"})
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -159,21 +159,35 @@ func TestDeleteAll(t *testing.T) {
 func TestDeleteByObjId(t *testing.T) {
 	_getMgr()
 
-	delCount, err := dbMgr.DeleteByObjId(database, testCollection, "666beb15926cb7bca675d6f0")
+	delCount, err := dbMgr.DeleteByObjId(database, testCollection, "668d08a9f3a1692e27e463a7")
 	if err != nil {
 		log.Fatalln(err)
 	}
 	log.Println("数据库删除成功", delCount)
 }
 
-// TestUpdateOne 更新测试#单条数据
-func TestUpdateOne(t *testing.T) {
+// TestUpdate 更新测试
+func TestUpdate(t *testing.T) {
 	_getMgr()
 
 	if err := dbMgr.Update(
 		database,
 		testCollection,
-		bson.M{"name": "testname"},
+		bson.M{"name": "testnameN"},
+		map[string]any{"other_name_update": "TestUpdated"}); err != nil {
+		log.Fatalln(err)
+	}
+	log.Println("数据库更新成功")
+}
+
+// TestUpdateOne 更新测试#单条数据
+func TestUpdateOne(t *testing.T) {
+	_getMgr()
+
+	if err := dbMgr.UpdateOne(
+		database,
+		testCollection,
+		bson.M{"id": 1720518825003},
 		map[string]any{"other_name": "testname----"}); err != nil {
 		log.Fatalln(err)
 	}
@@ -187,22 +201,8 @@ func TestUpdateByObjId(t *testing.T) {
 	if err := dbMgr.UpdateByObjId(
 		database,
 		testCollection,
-		"666beb15926cb7bca675d6f0",
+		"668d08a9f3a1692e27e463a8",
 		map[string]any{"other_name": "shimo111"}); err != nil {
-		log.Fatalln(err)
-	}
-	log.Println("数据库更新成功")
-}
-
-// TestUpdateByObjId 更新测试#单条数据
-func TestUpdated(t *testing.T) {
-	_getMgr()
-
-	if err := dbMgr.Update(
-		database,
-		testCollection,
-		bson.M{"name": "testname"},
-		map[string]any{"other_name_update": "TestUpdated"}); err != nil {
 		log.Fatalln(err)
 	}
 	log.Println("数据库更新成功")
@@ -212,7 +212,12 @@ func TestUpdated(t *testing.T) {
 func TestReplaceOne(t *testing.T) {
 	_getMgr()
 
-	err := dbMgr.ReplaceOne(database, testCollection, bson.M{"name": "shimo"}, map[string]any{"other_name": "shimo----shimo"})
+	err := dbMgr.ReplaceOne(
+		database,
+		testCollection,
+		bson.M{"other_name": "shimo111"},
+		map[string]any{"other_name": "shimo----TestReplaceOne"},
+	)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -223,7 +228,15 @@ func TestReplaceOne(t *testing.T) {
 func TestReplaceByObjId(t *testing.T) {
 	_getMgr()
 
-	err := dbMgr.ReplaceOne(database, testCollection, "666beb15926cb7bca675d6f0", map[string]any{"other_name": "shimo----shimo"})
+	err := dbMgr.ReplaceByObjId(
+		database,
+		testCollection,
+		"668d08a9f3a1692e27e463a8",
+		map[string]any{
+			"id":         20240709,
+			"other_name": "shimo----TestReplaceByObjId",
+		},
+	)
 	if err != nil {
 		log.Fatalln(err)
 	}

@@ -76,92 +76,180 @@ func (m *mgr) getConn() *MgoConn {
 
 // ***** 外部业务操作(安全沙盒) *****
 
+func (m *mgr) newOp(cmd, database, collection string) *op {
+	opObj := newOp(cmd)
+	opObj.append(database, collection)
+	return opObj
+}
+
 // HasCollection 判定数据库database中是否存在集合collection
 func (m *mgr) HasCollection(database, collection string) bool {
-	opObj := newOp(hasCollection)
-	opObj.append(database, collection)
-
+	opObj := m.newOp(cmdHasCollection, database, collection)
 	m.getConn().doOp(opObj)
-
-	result := <-opObj.resultAccept
-	// todo 参数转型
+	result := opObj.getResult()
+	// todo 数据转型
 	return result.results[0].(bool)
 }
 
 // CreateIndex 建立索引
 func (m *mgr) CreateIndex(database, collection string, indexs Indexs) {
-	m.getConn().CreateIndex(database, collection, indexs)
-}
-
-// InsertOne 插入单挑数据
-func (m *mgr) InsertOne(database, collection string, data any) error {
-	return m.getConn().InsertOne(database, collection, data)
+	opObj := m.newOp(cmdCreateIndex, database, collection)
+	opObj.append(indexs)
+	m.getConn().doOp(opObj)
+	_ = opObj.getResult()
+	// todo 数据转型
 }
 
 // InsertN 批量插入数据
 func (m *mgr) InsertN(database, collection string, datas []any) error {
-	return m.getConn().InsertN(database, collection, datas)
+	opObj := m.newOp(cmdInsertN, database, collection)
+	opObj.append(datas)
+	m.getConn().doOp(opObj)
+	result := opObj.getResult()
+	// todo 数据转型
+	return result.err
+}
+
+// InsertOne 插入单挑数据
+func (m *mgr) InsertOne(database, collection string, data any) error {
+	opObj := m.newOp(cmdInsertOne, database, collection)
+	opObj.append(data)
+	m.getConn().doOp(opObj)
+	result := opObj.getResult()
+	// todo 数据转型
+	return result.err
 }
 
 // Find 加载数据 filter一般是bson.D
 func (m *mgr) Find(database, collection string, filter any, num int64) ([][]byte, error) {
-	return m.getConn().Find(database, collection, filter, num)
+
+	opObj := m.newOp(cmdFind, database, collection)
+	opObj.append(filter, num)
+	m.getConn().doOp(opObj)
+	result := opObj.getResult()
+	// todo 数据转型
+	return result.results[0].([][]byte), result.err
 }
 
 // FindAll 查找全部数据
 func (m *mgr) FindAll(database, collection string) ([][]byte, error) {
-	return m.getConn().FindAll(database, collection)
+
+	opObj := m.newOp(cmdFindAll, database, collection)
+	m.getConn().doOp(opObj)
+	result := opObj.getResult()
+	// todo 数据转型
+	return result.results[0].([][]byte), result.err
 }
 
 // FindOne 查找单个数据
 func (m *mgr) FindOne(database, collection string, filter any) ([]byte, error) {
-	return m.getConn().FindOne(database, collection, filter)
+	opObj := m.newOp(cmdFindOne, database, collection)
+	opObj.append(filter)
+	m.getConn().doOp(opObj)
+	result := opObj.getResult()
+	// todo 数据转型
+	return (result.results[0]).([]byte), result.err
 }
 
 // FindByObjId 根据mongo生成的ObjectId进行查找,等同于FindOne
 func (m *mgr) FindByObjId(database, collection, oId string) ([]byte, error) {
-	return m.getConn().FindByObjId(database, collection, oId)
+	opObj := m.newOp(cmdFindByObjId, database, collection)
+	opObj.append(oId)
+	m.getConn().doOp(opObj)
+	result := opObj.getResult()
+	// todo 数据转型
+	return result.results[0].([]byte), result.err
 }
 
 // Delete 删除数据
 func (m *mgr) Delete(database, collection string, filter any) (int, error) {
-	return m.getConn().Delete(database, collection, filter)
+
+	opObj := m.newOp(cmdDelete, database, collection)
+	opObj.append(filter)
+	m.getConn().doOp(opObj)
+	result := opObj.getResult()
+	// todo 数据转型
+	return result.results[0].(int), result.err
 }
 
 // DeleteAll 删除全部数据(清空数据)
 func (m *mgr) DeleteAll(database, collection string, filter any) (int, error) {
-	return m.getConn().DeleteAll(database, collection, filter)
+	opObj := m.newOp(cmdDeleteAll, database, collection)
+	opObj.append(filter)
+	m.getConn().doOp(opObj)
+	result := opObj.getResult()
+	// todo 数据转型
+	return result.results[0].(int), result.err
 }
 
 // DeleteOne 删除数据(单个)
 func (m *mgr) DeleteOne(database, collection string, filter any) (int, error) {
-	return m.getConn().DeleteOne(database, collection, filter)
+	opObj := m.newOp(cmdDeleteOne, database, collection)
+	opObj.append(filter)
+	m.getConn().doOp(opObj)
+	result := opObj.getResult()
+	// todo 数据转型
+	return result.results[0].(int), result.err
 }
 
-// FindByObjId 根据mongo生成的ObjectId进行查找,等同于FindOne
+// DeleteByObjId 根据mongo生成的ObjectId进行查找,等同于DeleteOne
 func (m *mgr) DeleteByObjId(database, collection, oId string) (int, error) {
-	return m.getConn().DeleteByObjId(database, collection, oId)
+	opObj := m.newOp(cmdDeleteByObjId, database, collection)
+	opObj.append(oId)
+	m.getConn().doOp(opObj)
+	result := opObj.getResult()
+	// todo 数据转型
+	return result.results[0].(int), result.err
 }
 
-// 增查 ：改
+// Update 更新数据
+func (m *mgr) Update(database, collection string, filter, data any) error {
+	opObj := m.newOp(cmdUpdate, database, collection)
+	opObj.append(filter, data)
+	m.getConn().doOp(opObj)
+	result := opObj.getResult()
+	// todo 数据转型
+	return result.err
+}
+
 // UpdateOne 更新数据(单个)
-func (m *mgr) UpdateOne(database, collection string, filter, update any) error {
-	return m.getConn().UpdateOne(database, collection, filter, update)
+func (m *mgr) UpdateOne(database, collection string, filter, data any) error {
+	opObj := m.newOp(cmdUpdateOne, database, collection)
+	opObj.append(filter, data)
+	m.getConn().doOp(opObj)
+	result := opObj.getResult()
+	// todo 数据转型
+	return result.err
 }
 
 // UpdateByObjId 根据mongo生成的ObjectId进行更新
 func (m *mgr) UpdateByObjId(database, collection, oId string, data any) error {
-	return m.getConn().UpdateByObjId(database, collection, oId, data)
-}
-
-// UpdateOne 更新数据(单个)
-func (m *mgr) Update(database, collection string, filter, update any) error {
-	return m.getConn().Update(database, collection, filter, update)
+	opObj := m.newOp(cmdUpdateByObjId, database, collection)
+	opObj.append(oId, data)
+	m.getConn().doOp(opObj)
+	result := opObj.getResult()
+	// todo 数据转型
+	return result.err
 }
 
 // ReplaceOne 整体替换
 func (m *mgr) ReplaceOne(database, collection string, filter, replacement any) error {
-	return m.getConn().ReplaceOne(database, collection, filter, replacement)
+	opObj := m.newOp(cmdReplaceOne, database, collection)
+	opObj.append(filter, replacement)
+	m.getConn().doOp(opObj)
+	result := opObj.getResult()
+	// todo 数据转型
+	return result.err
+}
+
+// ReplaceOne 整体替换
+func (m *mgr) ReplaceByObjId(database, collection string, oId string, replacement any) error {
+	opObj := m.newOp(cmdReplaceByObjId, database, collection)
+	opObj.append(oId, replacement)
+	m.getConn().doOp(opObj)
+	result := opObj.getResult()
+	// todo 数据转型
+	return result.err
 }
 
 // ***** Service API *****
