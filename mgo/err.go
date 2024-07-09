@@ -4,6 +4,15 @@ import "github.com/shiimoo/godb/dberr"
 
 // ErrMgo%s
 var (
+	/***** 参数转型 *****/
+
+	// 转型获取数据库名错误
+	ErrToOpErr         = dberr.TempErr("mgoMgr toOp value Err : %s")
+	ErrToDatabaseErr   = dberr.TempErr("mgoMgr toDatabase value Err : %s")
+	ErrToCollectionErr = dberr.TempErr("mgoMgr toCollection value Err : %s")
+	ErrParamsErr       = dberr.TempErr("mgoMgr params Err : %s")
+
+	/***** 业务操作 *****/
 
 	// 链接管理器key异常
 	ErrMgoMgrKey = dberr.TempErr("mgoMgr key value Err : %s")

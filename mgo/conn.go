@@ -3,19 +3,27 @@ package mgo
 import (
 	"context"
 	"fmt"
+	"log"
+	"reflect"
+	"strings"
 
 	"github.com/shiimoo/godb/dberr"
+	"github.com/shiimoo/godb/lib/savectrl"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+const (
+	hasCollection = "hasCollection" // 是否拥有集合
+)
+
+type opFunc func(otherParams ...any) *opResult
+
 func NewConn(parent context.Context, url string) (*MgoConn, error) {
 	cOpts := options.Client().ApplyURI(url)
-	// ctx, cancel TODO:关闭监听待实现
-	ctx, _ := context.WithCancel(parent)
-	// Connect to MongoDB
+	ctx, cancel := context.WithCancel(parent)
 	client, err := mongo.Connect(ctx, cOpts)
 	if err != nil {
 		return nil, err
@@ -26,17 +34,121 @@ func NewConn(parent context.Context, url string) (*MgoConn, error) {
 	}
 	conn := new(MgoConn)
 	conn.ctx = ctx
+	conn.cancel = cancel
 	conn.client = client
+	conn.opChan = make(chan *op, 1000) // 长度为1000的处理队列
+	// 注册处理方法
+	conn.opFuncs = map[string]opFunc{
+		hasCollection: conn.hasCollection,
+	}
 	return conn, nil
 }
 
 type MgoConn struct {
 	ctx    context.Context
+	cancel context.CancelFunc
 	client *mongo.Client
+
+	opFuncs map[string]opFunc
+	opChan  chan *op // 操作参数
+}
+
+// ***** 数据业务操作 ****
+
+// 操作方法索引转换
+func (c *MgoConn) toOp(data any) string {
+	var err error
+	op, ok := data.(string)
+	if !ok {
+		err = dberr.NewErr(
+			ErrToOpErr,
+			fmt.Sprintf("need type string; but op[%v] type is %s", data, reflect.TypeOf(data)),
+		)
+	} else if len(strings.TrimSpace(op)) == 0 {
+		err = dberr.NewErr(
+			ErrToOpErr,
+			fmt.Sprintf("op[%s] length is zero", data),
+		)
+	} else if _, found := c.opFuncs[op]; !found {
+		err = dberr.NewErr(
+			ErrToOpErr,
+			fmt.Sprintf("op[%s] not found", data),
+		)
+	}
+	if err != nil {
+		panic(err)
+	}
+	return op
+}
+
+// 数据库名转换
+func (c *MgoConn) toDatabase(data any) string {
+	var err error
+	database, ok := data.(string)
+	if !ok {
+		err = dberr.NewErr(
+			ErrToDatabaseErr,
+			fmt.Sprintf("need type string; but data[%v] type is %s", data, reflect.TypeOf(data)),
+		)
+
+	} else if len(strings.TrimSpace(database)) == 0 {
+		err = dberr.NewErr(
+			ErrToDatabaseErr,
+			fmt.Sprintf("data[%s] length is zero", data),
+		)
+	}
+	if err != nil {
+		panic(err)
+	}
+	return database
+}
+
+// 集合名转换
+func (c *MgoConn) toCollection(data any) string {
+	var err error
+	collection, ok := data.(string)
+	if !ok {
+		err = dberr.NewErr(
+			ErrToCollectionErr,
+			fmt.Sprintf("need type string; but data[%v] type is %s", data, reflect.TypeOf(data)),
+		)
+
+	} else if len(strings.TrimSpace(collection)) == 0 {
+		err = dberr.NewErr(
+			ErrToCollectionErr,
+			fmt.Sprintf("data[%s] length is zero", data),
+		)
+	}
+	if err != nil {
+		panic(err)
+	}
+	return collection
+}
+
+// 参数解析
+func (c *MgoConn) parseParams(params ...any) (database string, collection string, args []any) {
+	var err error
+	if params == nil {
+		err = dberr.NewErr(ErrParamsErr, "params is nil")
+	} else if len(params) < 2 {
+		err = dberr.NewErr(ErrParamsErr, fmt.Sprintf("params[%v] length < 2", params))
+	}
+	if err != nil {
+		panic(err)
+	}
+	return c.toDatabase(params[0]), c.toDatabase(params[1]), params[2:]
 }
 
 // 判定数据库database中是否存在集合collection
-func (c *MgoConn) hasCollection(database, collection string) bool {
+func (c *MgoConn) hasCollection(otherParams ...any) *opResult {
+	database, collection, otherParams := c.parseParams(otherParams...)
+	result := newOpResult()
+	result.addResult(c._hasCollection(database, collection, otherParams...))
+	return result
+}
+
+// 判定数据库database中是否存在集合collection
+func (c *MgoConn) _hasCollection(database, collection string, params ...any) bool {
 	list, err := c.client.Database(database).ListCollectionNames(c.ctx, bson.M{})
 	if err != nil {
 		return false
@@ -48,9 +160,6 @@ func (c *MgoConn) hasCollection(database, collection string) bool {
 	}
 	return false
 }
-
-// Indexs mongo 索引结构重写(复刻结构primitive.E) {{字段名:1/-1}, {关键字:值}}
-type Indexs bson.D
 
 // 创建索引
 func (c *MgoConn) CreateIndex(database, collection string, indexs Indexs) {
@@ -237,4 +346,41 @@ func (c *MgoConn) ReplaceByObjId(database, collection string, oId string, replac
 		{Key: "_id", Value: _id},
 	}
 	return c.ReplaceOne(database, collection, filter, replacement)
+}
+
+// ***** ServerAPI
+
+func (c *MgoConn) Close() {
+	c.cancel()
+}
+
+func (c *MgoConn) closeCallBack() {
+	// todo 链接关闭回调
+}
+
+func (c *MgoConn) Start() {
+	go c._start()
+}
+
+func (c *MgoConn) _start() {
+	for {
+		select {
+		case <-c.ctx.Done():
+			c.closeCallBack()
+			return
+		case opObj := <-c.opChan:
+			if err := savectrl.SaveBox(func() {
+				// todo cmd 检查?
+				handler := c.opFuncs[opObj.cmd]
+				opObj.resultAccept <- handler(opObj.args...)
+			}); err != nil {
+				// todo 错误日志打印
+				log.Println(err)
+			}
+		}
+	}
+}
+
+func (c *MgoConn) doOp(opObj *op) {
+	c.opChan <- opObj
 }

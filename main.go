@@ -1,33 +1,39 @@
 package main
 
 import (
-	"context"
 	"log"
-	"time"
 
-	"github.com/shiimoo/godb/mgo"
+	"github.com/shiimoo/godb/base"
 )
 
 func main() {
-	ctx := context.Background()
-	dbMgr, err := mgo.GetMgr(ctx, "default")
-	if err != nil {
-		log.Fatalln(err)
-	}
-	dbMgr.Seturl("127.0.0.1", 27017)
-	num, err := dbMgr.Connect(10)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	if err != nil {
-		log.Fatalln(err)
-	}
-	log.Println("数据库连接成功!", num)
+	// listTest()
+	// err := savectrl.SaveBox(func() {
+	// 	asveText()
+	// })
+	// log.Println("111", err)
 
-	dbMgr.Start()
-	time.AfterFunc(10*time.Second, func() {
-		dbMgr.Close()
-	})
-	for {
+	aa := []int{
+		11, 22,
 	}
+	log.Println(aa[0], aa[1], aa[2:])
+}
+
+func asveText() {
+	a := 0
+	a = 10 / a
+	// panic("savectrl.SaveBox test panic")
+}
+
+func listTest() {
+	list := base.NewList()
+	log.Println(list)
+	list.Add(11)
+	log.Println(list)
+	list.Add(2)
+	log.Println(list)
+
+	log.Println("---------------")
+	log.Println(list.Pop())
+	log.Println(list)
 }

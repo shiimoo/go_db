@@ -68,6 +68,7 @@ func (m *mgr) addConn(conn *MgoConn) {
 func (m *mgr) getConn() *MgoConn {
 	m.RLock()
 	defer m.RUnlock()
+	// todo 分配规则优化
 	m.useCount += 1
 	index := m.useCount % m.Count()
 	return m.pool[index]
@@ -77,7 +78,14 @@ func (m *mgr) getConn() *MgoConn {
 
 // HasCollection 判定数据库database中是否存在集合collection
 func (m *mgr) HasCollection(database, collection string) bool {
-	return m.getConn().hasCollection(database, collection)
+	opObj := newOp(hasCollection)
+	opObj.append(database, collection)
+
+	m.getConn().doOp(opObj)
+
+	result := <-opObj.resultAccept
+	// todo 参数转型
+	return result.results[0].(bool)
 }
 
 // CreateIndex 建立索引
@@ -159,11 +167,10 @@ func (m *mgr) ReplaceOne(database, collection string, filter, replacement any) e
 // ***** Service API *****
 
 func (m *mgr) Start() {
-	for {
-
-	}
 	go m.waitClose()
-	// 消息队列
+	for _, c := range m.pool {
+		c.Start()
+	}
 }
 
 func (m *mgr) waitClose() {
@@ -176,6 +183,7 @@ func (m *mgr) Close() {
 }
 
 func (m *mgr) _close() {
+
 	log.Println("mgr Done")
 }
 

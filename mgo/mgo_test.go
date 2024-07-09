@@ -28,11 +28,13 @@ func _getMgr() {
 	if err != nil {
 		log.Fatalln(err)
 	}
+	dbMgr.Start()
 	log.Println("数据库连接成功!", num)
 }
 
 // TestCreateIndex 创建索引
 func TestCreateIndex(t *testing.T) {
+	_getMgr()
 	// 对于已存在的集合不予创建索引,视实际业务需求场景确定
 	if !dbMgr.HasCollection(database, testCollection) {
 		dbMgr.CreateIndex(database, testCollection, Indexs{
