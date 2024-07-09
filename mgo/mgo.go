@@ -10,7 +10,7 @@ type Indexs bson.D
 // 命令结果
 type opResult struct {
 	err     error // 错误信息
-	results []any // 结果参数 todo 改成唯一参数，去掉[]
+	results []any // 结果参数
 }
 
 func newOpResult() *opResult {
@@ -47,6 +47,6 @@ func (o *op) append(args ...any) {
 }
 
 // 参数出栈
-func (o *op) getResult() *opResult {
+func (o *op) getResult() *opResult { // todo 该方法扔到sendOp里集成
 	return <-o.resultAccept
 }

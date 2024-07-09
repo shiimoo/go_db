@@ -83,173 +83,273 @@ func (m *mgr) newOp(cmd, database, collection string) *op {
 }
 
 // HasCollection 判定数据库database中是否存在集合collection
-func (m *mgr) HasCollection(database, collection string) bool {
+func (m *mgr) HasCollection(database, collection string) (bool, error) {
 	opObj := m.newOp(cmdHasCollection, database, collection)
-	m.getConn().doOp(opObj)
+	if err := m.getConn().sendOp(opObj); err != nil {
+		return false, err
+	}
 	result := opObj.getResult()
-	// todo 数据转型
-	return result.results[0].(bool)
+
+	data, err := parseResultHasCollection(result.results...)
+	if err != nil {
+		return false, err
+	}
+	return data, nil
 }
 
 // CreateIndex 建立索引
-func (m *mgr) CreateIndex(database, collection string, indexs Indexs) {
+func (m *mgr) CreateIndex(database, collection string, indexs Indexs) error {
 	opObj := m.newOp(cmdCreateIndex, database, collection)
 	opObj.append(indexs)
-	m.getConn().doOp(opObj)
-	_ = opObj.getResult()
-	// todo 数据转型
+	if err := m.getConn().sendOp(opObj); err != nil {
+		return err
+	}
+	result := opObj.getResult()
+	if result.err != nil {
+		return result.err
+	}
+	return nil
 }
 
 // InsertN 批量插入数据
 func (m *mgr) InsertN(database, collection string, datas []any) error {
 	opObj := m.newOp(cmdInsertN, database, collection)
 	opObj.append(datas)
-	m.getConn().doOp(opObj)
+	if err := m.getConn().sendOp(opObj); err != nil {
+		return err
+	}
 	result := opObj.getResult()
-	// todo 数据转型
-	return result.err
+	if result.err != nil {
+		return result.err
+	}
+	return nil
 }
 
 // InsertOne 插入单挑数据
 func (m *mgr) InsertOne(database, collection string, data any) error {
 	opObj := m.newOp(cmdInsertOne, database, collection)
 	opObj.append(data)
-	m.getConn().doOp(opObj)
+	if err := m.getConn().sendOp(opObj); err != nil {
+		return err
+	}
 	result := opObj.getResult()
-	// todo 数据转型
-	return result.err
+	if result.err != nil {
+		return result.err
+	}
+	return nil
 }
 
 // Find 加载数据 filter一般是bson.D
 func (m *mgr) Find(database, collection string, filter any, num int64) ([][]byte, error) {
-
 	opObj := m.newOp(cmdFind, database, collection)
 	opObj.append(filter, num)
-	m.getConn().doOp(opObj)
+	if err := m.getConn().sendOp(opObj); err != nil {
+		return nil, err
+	}
 	result := opObj.getResult()
-	// todo 数据转型
-	return result.results[0].([][]byte), result.err
+	if result.err != nil {
+		return nil, result.err
+	}
+	datas, err := parseResultFind(result.results...)
+	if err != nil {
+		return nil, err
+	}
+	return datas, nil
 }
 
 // FindAll 查找全部数据
 func (m *mgr) FindAll(database, collection string) ([][]byte, error) {
-
 	opObj := m.newOp(cmdFindAll, database, collection)
-	m.getConn().doOp(opObj)
+	if err := m.getConn().sendOp(opObj); err != nil {
+		return nil, err
+	}
 	result := opObj.getResult()
-	// todo 数据转型
-	return result.results[0].([][]byte), result.err
+	if result.err != nil {
+		return nil, result.err
+	}
+	datas, err := parseResultFindAll(result.results...)
+	if err != nil {
+		return nil, err
+	}
+	return datas, nil
 }
 
 // FindOne 查找单个数据
 func (m *mgr) FindOne(database, collection string, filter any) ([]byte, error) {
 	opObj := m.newOp(cmdFindOne, database, collection)
 	opObj.append(filter)
-	m.getConn().doOp(opObj)
+	if err := m.getConn().sendOp(opObj); err != nil {
+		return nil, err
+	}
 	result := opObj.getResult()
-	// todo 数据转型
-	return (result.results[0]).([]byte), result.err
+	if result.err != nil {
+		return nil, result.err
+	}
+	data, err := parseResultFindOne(result.results...)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 // FindByObjId 根据mongo生成的ObjectId进行查找,等同于FindOne
 func (m *mgr) FindByObjId(database, collection, oId string) ([]byte, error) {
 	opObj := m.newOp(cmdFindByObjId, database, collection)
 	opObj.append(oId)
-	m.getConn().doOp(opObj)
+	if err := m.getConn().sendOp(opObj); err != nil {
+		return nil, err
+	}
 	result := opObj.getResult()
-	// todo 数据转型
-	return result.results[0].([]byte), result.err
+	if result.err != nil {
+		return nil, result.err
+	}
+	data, err := parseResultFindByObjId(result.results...)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 // Delete 删除数据
 func (m *mgr) Delete(database, collection string, filter any) (int, error) {
-
 	opObj := m.newOp(cmdDelete, database, collection)
 	opObj.append(filter)
-	m.getConn().doOp(opObj)
+	if err := m.getConn().sendOp(opObj); err != nil {
+		return 0, err
+	}
 	result := opObj.getResult()
-	// todo 数据转型
-	return result.results[0].(int), result.err
+	if result.err != nil {
+		return 0, result.err
+	}
+	num, err := parseResultDelete(result.results...)
+	if err != nil {
+		return 0, err
+	}
+	return num, nil
 }
 
 // DeleteAll 删除全部数据(清空数据)
 func (m *mgr) DeleteAll(database, collection string, filter any) (int, error) {
 	opObj := m.newOp(cmdDeleteAll, database, collection)
 	opObj.append(filter)
-	m.getConn().doOp(opObj)
+	if err := m.getConn().sendOp(opObj); err != nil {
+		return 0, err
+	}
 	result := opObj.getResult()
-	// todo 数据转型
-	return result.results[0].(int), result.err
+	if result.err != nil {
+		return 0, result.err
+	}
+	num, err := parseResultDeleteAll(result.results...)
+	if err != nil {
+		return 0, err
+	}
+	return num, nil
 }
 
 // DeleteOne 删除数据(单个)
 func (m *mgr) DeleteOne(database, collection string, filter any) (int, error) {
 	opObj := m.newOp(cmdDeleteOne, database, collection)
 	opObj.append(filter)
-	m.getConn().doOp(opObj)
+	if err := m.getConn().sendOp(opObj); err != nil {
+		return 0, err
+	}
 	result := opObj.getResult()
-	// todo 数据转型
-	return result.results[0].(int), result.err
+	if result.err != nil {
+		return 0, result.err
+	}
+	num, err := parseResultDeleteOne(result.results...)
+	if err != nil {
+		return 0, err
+	}
+	return num, nil
 }
 
 // DeleteByObjId 根据mongo生成的ObjectId进行查找,等同于DeleteOne
 func (m *mgr) DeleteByObjId(database, collection, oId string) (int, error) {
 	opObj := m.newOp(cmdDeleteByObjId, database, collection)
 	opObj.append(oId)
-	m.getConn().doOp(opObj)
+	if err := m.getConn().sendOp(opObj); err != nil {
+		return 0, err
+	}
 	result := opObj.getResult()
-	// todo 数据转型
-	return result.results[0].(int), result.err
+	if result.err != nil {
+		return 0, result.err
+	}
+	num, err := parseResultDeleteByObjId(result.results...)
+	if err != nil {
+		return 0, err
+	}
+	return num, nil
 }
 
 // Update 更新数据
 func (m *mgr) Update(database, collection string, filter, data any) error {
 	opObj := m.newOp(cmdUpdate, database, collection)
 	opObj.append(filter, data)
-	m.getConn().doOp(opObj)
+	if err := m.getConn().sendOp(opObj); err != nil {
+		return err
+	}
 	result := opObj.getResult()
-	// todo 数据转型
-	return result.err
+	if result.err != nil {
+		return result.err
+	}
+	return nil
 }
 
 // UpdateOne 更新数据(单个)
 func (m *mgr) UpdateOne(database, collection string, filter, data any) error {
 	opObj := m.newOp(cmdUpdateOne, database, collection)
 	opObj.append(filter, data)
-	m.getConn().doOp(opObj)
+	if err := m.getConn().sendOp(opObj); err != nil {
+		return err
+	}
 	result := opObj.getResult()
-	// todo 数据转型
-	return result.err
+	if result.err != nil {
+		return result.err
+	}
+	return nil
 }
 
 // UpdateByObjId 根据mongo生成的ObjectId进行更新
 func (m *mgr) UpdateByObjId(database, collection, oId string, data any) error {
 	opObj := m.newOp(cmdUpdateByObjId, database, collection)
 	opObj.append(oId, data)
-	m.getConn().doOp(opObj)
+	if err := m.getConn().sendOp(opObj); err != nil {
+		return err
+	}
 	result := opObj.getResult()
-	// todo 数据转型
-	return result.err
+	if result.err != nil {
+		return result.err
+	}
+	return nil
 }
 
 // ReplaceOne 整体替换
 func (m *mgr) ReplaceOne(database, collection string, filter, replacement any) error {
 	opObj := m.newOp(cmdReplaceOne, database, collection)
 	opObj.append(filter, replacement)
-	m.getConn().doOp(opObj)
+	if err := m.getConn().sendOp(opObj); err != nil {
+		return err
+	}
 	result := opObj.getResult()
-	// todo 数据转型
-	return result.err
+	if result.err != nil {
+		return result.err
+	}
+	return nil
 }
 
 // ReplaceOne 整体替换
 func (m *mgr) ReplaceByObjId(database, collection string, oId string, replacement any) error {
 	opObj := m.newOp(cmdReplaceByObjId, database, collection)
 	opObj.append(oId, replacement)
-	m.getConn().doOp(opObj)
+	if err := m.getConn().sendOp(opObj); err != nil {
+		return err
+	}
 	result := opObj.getResult()
-	// todo 数据转型
-	return result.err
+	if result.err != nil {
+		return result.err
+	}
+	return nil
 }
 
 // ***** Service API *****

@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	database       = "testdb"
+	database       = "testdb1"
 	testCollection = "testSet"
 )
 
@@ -36,10 +36,16 @@ func _getMgr() {
 func TestCreateIndex(t *testing.T) {
 	_getMgr()
 	// 对于已存在的集合不予创建索引,视实际业务需求场景确定
-	if !dbMgr.HasCollection(database, testCollection) {
-		dbMgr.CreateIndex(database, testCollection, Indexs{
+	ok, err := dbMgr.HasCollection(database, testCollection)
+	if err != nil {
+		t.Errorf("HasCollection Err", err)
+	}
+	if !ok {
+		if err := dbMgr.CreateIndex(database, testCollection, Indexs{
 			{Key: "id", Value: 1},
-		})
+		}); err != nil {
+			t.Errorf("CreateIndex Err", err)
+		}
 		log.Printf("%s.%s不存在, 重建索引!\n", database, testCollection)
 	}
 }
