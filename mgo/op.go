@@ -102,8 +102,8 @@ func parseInsertOneParams(params ...any) any {
 	return params[0]
 }
 
-// cmdFind: [bson.D, int64, ] // 2 params
-func parseFindParams(params ...any) (bson.D, int64) {
+// cmdFind: [any, int64, ] // 2 params
+func parseFindParams(params ...any) (any, int64) {
 	var filterOri, numOri any
 	if len(params) > 0 {
 		filterOri = params[0]
@@ -112,20 +112,11 @@ func parseFindParams(params ...any) (bson.D, int64) {
 		numOri = params[1]
 	}
 
-	var filter bson.D
+	var filter any
 	if filterOri == nil {
-		filter = bson.D{}
+		filter = bson.M{}
 	} else {
-		var ok bool
-		filter, ok = filterOri.(bson.D)
-		if !ok {
-			panic(dberr.NewErr(
-				ErrOpParmsErr,
-				fmt.Sprintf("filter type must be bson.D, but is %s", reflect.TypeOf(filterOri)),
-				cmdFind,
-				params,
-			))
-		}
+		filter = filterOri
 	}
 
 	var num int64
@@ -148,27 +139,18 @@ func parseFindParams(params ...any) (bson.D, int64) {
 
 // cmdFindAll: [] // no params
 
-// cmdFindOne: [bson.D, ] // 1 params
-func parseFindOneParams(params ...any) bson.D {
+// cmdFindOne: [any, ] // 1 params
+func parseFindOneParams(params ...any) any {
 	var filterOri any
 	if len(params) > 0 {
 		filterOri = params[0]
 	}
 
-	var filter bson.D
+	var filter any
 	if filterOri == nil {
-		filter = bson.D{}
+		filter = bson.M{}
 	} else {
-		var ok bool
-		filter, ok = filterOri.(bson.D)
-		if !ok {
-			panic(dberr.NewErr(
-				ErrOpParmsErr,
-				fmt.Sprintf("filter type must be bson.D, but is %s", reflect.TypeOf(filterOri)),
-				cmdFind,
-				params,
-			))
-		}
+		filter = filterOri
 	}
 
 	return filter
@@ -199,27 +181,18 @@ func parseFindByObjIdParams(params ...any) string {
 	return oId
 }
 
-// cmdDelete: [bson.D, ] // 1 params
-func parseDeleteParams(params ...any) bson.D {
+// cmdDelete: [any, ] // 1 params
+func parseDeleteParams(params ...any) any {
 	var filterOri any
 	if len(params) > 0 {
 		filterOri = params[0]
 	}
 
-	var filter bson.D
+	var filter any
 	if filterOri == nil {
-		filter = bson.D{}
+		filter = bson.M{}
 	} else {
-		var ok bool
-		filter, ok = filterOri.(bson.D)
-		if !ok {
-			panic(dberr.NewErr(
-				ErrOpParmsErr,
-				fmt.Sprintf("filter type must be bson.D, but is %s", reflect.TypeOf(filterOri)),
-				cmdDelete,
-				params,
-			))
-		}
+		filter = filterOri
 	}
 
 	return filter
@@ -227,27 +200,18 @@ func parseDeleteParams(params ...any) bson.D {
 
 // cmdDeleteAll: [] // no params
 
-// cmdDeleteOne: [bson.D, ] // 1 params
-func parseDeleteOneParams(params ...any) bson.D {
+// cmdDeleteOne: [any, ] // 1 params
+func parseDeleteOneParams(params ...any) any {
 	var filterOri any
 	if len(params) > 0 {
 		filterOri = params[0]
 	}
 
-	var filter bson.D
+	var filter any
 	if filterOri == nil {
-		filter = bson.D{}
+		filter = bson.M{}
 	} else {
-		var ok bool
-		filter, ok = filterOri.(bson.D)
-		if !ok {
-			panic(dberr.NewErr(
-				ErrOpParmsErr,
-				fmt.Sprintf("filter type must be bson.D, but is %s", reflect.TypeOf(filterOri)),
-				cmdDeleteOne,
-				params,
-			))
-		}
+		filter = filterOri
 	}
 
 	return filter
@@ -277,8 +241,8 @@ func parseDeleteByObjIdParams(params ...any) string {
 	return oId
 }
 
-// cmdUpdate: [bson.D, any, ] // 2 params
-func parseUpdateParams(params ...any) (bson.D, any) {
+// cmdUpdate: [any, any, ] // 2 params
+func parseUpdateParams(params ...any) (any, any) {
 	if len(params) < 2 {
 		panic(dberr.NewErr(
 			ErrOpParmsErr,
@@ -287,23 +251,17 @@ func parseUpdateParams(params ...any) (bson.D, any) {
 			params,
 		))
 	}
+
 	filterOri := params[0]
-	var filter bson.D
+
+	var filter any
 	if filterOri == nil {
-		filter = bson.D{}
+		filter = bson.M{}
 	} else {
-		var ok bool
-		filter, ok = filterOri.(bson.D)
-		if !ok {
-			panic(dberr.NewErr(
-				ErrOpParmsErr,
-				fmt.Sprintf("filter type must be bson.D, but is %s", reflect.TypeOf(filterOri)),
-				cmdUpdate,
-				params,
-			))
-		}
+		filter = filterOri
 	}
-	data := params[0]
+
+	data := params[1]
 	if data == nil {
 		panic(dberr.NewErr(
 			ErrOpParmsErr,
@@ -316,8 +274,8 @@ func parseUpdateParams(params ...any) (bson.D, any) {
 	return filter, data
 }
 
-// cmdUpdateOne: [bson.D, any, ] // 2 params
-func parseUpdateOneParams(params ...any) (bson.D, any) {
+// cmdUpdateOne: [any, any, ] // 2 params
+func parseUpdateOneParams(params ...any) (any, any) {
 	if len(params) < 2 {
 		panic(dberr.NewErr(
 			ErrOpParmsErr,
@@ -327,22 +285,14 @@ func parseUpdateOneParams(params ...any) (bson.D, any) {
 		))
 	}
 	filterOri := params[0]
-	var filter bson.D
+	var filter any
 	if filterOri == nil {
-		filter = bson.D{}
+		filter = bson.M{}
 	} else {
-		var ok bool
-		filter, ok = filterOri.(bson.D)
-		if !ok {
-			panic(dberr.NewErr(
-				ErrOpParmsErr,
-				fmt.Sprintf("filter type must be bson.D, but is %s", reflect.TypeOf(filterOri)),
-				cmdUpdateOne,
-				params,
-			))
-		}
+		filter = filterOri
 	}
-	data := params[0]
+
+	data := params[1]
 	if data == nil {
 		panic(dberr.NewErr(
 			ErrOpParmsErr,
@@ -379,8 +329,8 @@ func parseUpdateByObjIdParams(params ...any) string {
 	return oId
 }
 
-// cmdReplaceOne: [bson.D, any, ] // 2 params
-func parseReplaceOneParams(params ...any) (bson.D, any) {
+// cmdReplaceOne: [any, any, ] // 2 params
+func parseReplaceOneParams(params ...any) (any, any) {
 	if len(params) < 2 {
 		panic(dberr.NewErr(
 			ErrOpParmsErr,
@@ -390,22 +340,13 @@ func parseReplaceOneParams(params ...any) (bson.D, any) {
 		))
 	}
 	filterOri := params[0]
-	var filter bson.D
+	var filter any
 	if filterOri == nil {
-		filter = bson.D{}
+		filter = bson.M{}
 	} else {
-		var ok bool
-		filter, ok = filterOri.(bson.D)
-		if !ok {
-			panic(dberr.NewErr(
-				ErrOpParmsErr,
-				fmt.Sprintf("filter type must be bson.D, but is %s", reflect.TypeOf(filterOri)),
-				cmdReplaceOne,
-				params,
-			))
-		}
+		filter = filterOri
 	}
-	replacement := params[0]
+	replacement := params[1]
 	if replacement == nil {
 		panic(dberr.NewErr(
 			ErrOpParmsErr,
@@ -418,7 +359,7 @@ func parseReplaceOneParams(params ...any) (bson.D, any) {
 	return filter, replacement
 }
 
-// cmdReplaceByObjId: [bson.D, any, ] // 2 params
+// cmdReplaceByObjId: [bson.D, ] // 1 params
 func parseReplaceByObjIdParams(params ...any) string {
 	if len(params) < 1 {
 		panic(dberr.NewErr(
