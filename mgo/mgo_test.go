@@ -38,13 +38,13 @@ func TestCreateIndex(t *testing.T) {
 	// 对于已存在的集合不予创建索引,视实际业务需求场景确定
 	ok, err := dbMgr.HasCollection(database, testCollection)
 	if err != nil {
-		t.Errorf("HasCollection Err", err)
+		t.Errorf("HasCollection Err: %s", err)
 	}
 	if !ok {
 		if err := dbMgr.CreateIndex(database, testCollection, Indexs{
 			{Key: "id", Value: 1},
 		}); err != nil {
-			t.Errorf("CreateIndex Err", err)
+			t.Errorf("CreateIndex Err: %s", err)
 		}
 		log.Printf("%s.%s不存在, 重建索引!\n", database, testCollection)
 	}
