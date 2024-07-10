@@ -14,14 +14,18 @@ func newLog(lv logLv) *Log {
 	return msg
 }
 
+type Data struct {
+	Value any
+	Key   string
+}
+
 type Log struct {
 	lv         logLv     // 日志级别
 	createTime time.Time // 日志创建时间
 	labels     []string  // 日志标签列表, 一个日志可能有多个标签, 标签顺序即优先级
 
-	format   string   // 日志模版
-	data     []any    // 关键数据
-	dataDesc []string // 关键数据的描述
+	format string // 日志模版
+	datas  []Data // 日志数据
 }
 
 // RefreshTime 刷新最新的日志时间
@@ -48,22 +52,23 @@ func (l *Log) SetFormat(format string) {
 }
 
 // AddData 添加数据
-func (l *Log) AddData(data any, desc string) {
-	if l.data == nil {
-		l.data = make([]any, 0)
-	}
-	if l.dataDesc == nil {
-		l.dataDesc = make([]string, 0)
+func (l *Log) AddData(list ...Data) {
+	if l.datas == nil {
+		l.datas = make([]Data, 0)
 	}
 
-	l.data = append(l.data, data)
-	l.dataDesc = append(l.dataDesc, desc)
+	l.datas = append(l.datas, list...)
 }
 
 // String 日志输出
 func (l *Log) String() string {
-	if l.data == nil || len(l.data) == 0 {
+	if l.datas == nil || len(l.datas) == 0 {
 		return l.format
 	}
-	return fmt.Sprintf(l.format, l.data...)
+
+	values := make([]any, 0)
+	for _, data := range l.datas {
+		values = append(values, data.Value)
+	}
+	return fmt.Sprintf(l.format, values...)
 }

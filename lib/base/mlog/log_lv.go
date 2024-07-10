@@ -7,7 +7,7 @@ import "fmt"
 type logLv string
 
 func (l logLv) String() string {
-	return fmt.Sprintf("%-8s", string(l))
+	return fmt.Sprintf("%-5s", string(l))
 }
 
 const (

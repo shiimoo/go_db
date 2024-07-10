@@ -1,8 +1,10 @@
 package mlog
 
 import (
+	"context"
 	"log"
 	"testing"
+	"time"
 )
 
 func TestLogLv(t *testing.T) {
@@ -14,8 +16,10 @@ func TestLogLv(t *testing.T) {
 }
 
 func TestLogMsg(t *testing.T) {
-	msg := newLog(Info)
-	msg.format = "hello %s"
-	msg.AddData("test", "测试数据")
-	log.Println(msg)
+
+	logger := newLogger(context.Background())
+	logger.Start()
+	logger.Output(Info, []string{"server", "test"}, "log Test")
+	logger.Outputf(Info, []string{"server", "test"}, "log Test %s ", Data{time.Now(), "time"})
+	time.Sleep(10 * time.Second)
 }
