@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/shiimoo/godb/dberr"
+	"github.com/shiimoo/godb/lib/base/errors"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -46,7 +46,7 @@ type opFunc func(otherParams ...any) *opResult
 // cmdCreateIndex: [Indexs, ] // 1 params
 func parseCreateIndexParams(params ...any) Indexs {
 	if len(params) < 1 {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			"params length < 1",
 			cmdCreateIndex,
@@ -56,7 +56,7 @@ func parseCreateIndexParams(params ...any) Indexs {
 	oriIndexs := params[0]
 	indexs, ok := oriIndexs.(Indexs)
 	if !ok {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			fmt.Sprintf("params[0] type must be mgo.Indexs, but is %s", reflect.TypeOf(oriIndexs)),
 			cmdCreateIndex,
@@ -69,7 +69,7 @@ func parseCreateIndexParams(params ...any) Indexs {
 // cmdInsertN: [[]any, ] // 1 params
 func parseInsertNParams(params ...any) []any {
 	if len(params) < 1 {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			"params length < 1",
 			cmdInsertN,
@@ -79,7 +79,7 @@ func parseInsertNParams(params ...any) []any {
 	oriDatas := params[0]
 	datas, ok := oriDatas.([]any)
 	if !ok {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			fmt.Sprintf("params[0] type must be []any, but is %s", reflect.TypeOf(oriDatas)),
 			cmdInsertN,
@@ -92,7 +92,7 @@ func parseInsertNParams(params ...any) []any {
 // cmdInsertOne: [any, ] // 1 params
 func parseInsertOneParams(params ...any) any {
 	if len(params) < 1 {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			"params length < 1",
 			cmdInsertOne,
@@ -126,7 +126,7 @@ func parseFindParams(params ...any) (any, int64) {
 		var ok bool
 		num, ok = numOri.(int64)
 		if !ok {
-			panic(dberr.NewErr(
+			panic(errors.NewErr(
 				ErrOpParmsErr,
 				fmt.Sprintf("num type must be int64, but is %s", reflect.TypeOf(numOri)),
 				cmdFind,
@@ -159,7 +159,7 @@ func parseFindOneParams(params ...any) any {
 // cmdFindByObjId: [string, ] // 1 params
 func parseFindByObjIdParams(params ...any) string {
 	if len(params) < 1 {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			"params length < 1",
 			cmdFindByObjId,
@@ -170,7 +170,7 @@ func parseFindByObjIdParams(params ...any) string {
 	oriOId := params[0]
 	oId, ok := oriOId.(string)
 	if !ok {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			fmt.Sprintf("params[0] type must be string, but is %s", reflect.TypeOf(oriOId)),
 			cmdFindByObjId,
@@ -220,7 +220,7 @@ func parseDeleteOneParams(params ...any) any {
 // cmdDeleteByObjId: [string, ] // 1 params
 func parseDeleteByObjIdParams(params ...any) string {
 	if len(params) < 1 {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			"params length < 1",
 			cmdDeleteByObjId,
@@ -231,7 +231,7 @@ func parseDeleteByObjIdParams(params ...any) string {
 	oriOId := params[0]
 	oId, ok := oriOId.(string)
 	if !ok {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			fmt.Sprintf("params[0] type must be string, but is %s", reflect.TypeOf(oriOId)),
 			cmdDeleteByObjId,
@@ -244,7 +244,7 @@ func parseDeleteByObjIdParams(params ...any) string {
 // cmdUpdate: [any, any, ] // 2 params
 func parseUpdateParams(params ...any) (any, any) {
 	if len(params) < 2 {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			"params length < 2",
 			cmdUpdate,
@@ -263,7 +263,7 @@ func parseUpdateParams(params ...any) (any, any) {
 
 	data := params[1]
 	if data == nil {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			"update data is nil",
 			cmdUpdate,
@@ -277,7 +277,7 @@ func parseUpdateParams(params ...any) (any, any) {
 // cmdUpdateOne: [any, any, ] // 2 params
 func parseUpdateOneParams(params ...any) (any, any) {
 	if len(params) < 2 {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			"params length < 2",
 			cmdUpdateOne,
@@ -294,7 +294,7 @@ func parseUpdateOneParams(params ...any) (any, any) {
 
 	data := params[1]
 	if data == nil {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			"update data is nil",
 			cmdUpdate,
@@ -308,7 +308,7 @@ func parseUpdateOneParams(params ...any) (any, any) {
 // cmdUpdateByObjId: [string, ] // 1 params
 func parseUpdateByObjIdParams(params ...any) string {
 	if len(params) < 1 {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			"params length < 1",
 			cmdUpdateByObjId,
@@ -319,7 +319,7 @@ func parseUpdateByObjIdParams(params ...any) string {
 	oriOId := params[0]
 	oId, ok := oriOId.(string)
 	if !ok {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			fmt.Sprintf("params[0] type must be string, but is %s", reflect.TypeOf(oriOId)),
 			cmdUpdateByObjId,
@@ -332,7 +332,7 @@ func parseUpdateByObjIdParams(params ...any) string {
 // cmdReplaceOne: [any, any, ] // 2 params
 func parseReplaceOneParams(params ...any) (any, any) {
 	if len(params) < 2 {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			"params length < 2",
 			cmdReplaceOne,
@@ -348,7 +348,7 @@ func parseReplaceOneParams(params ...any) (any, any) {
 	}
 	replacement := params[1]
 	if replacement == nil {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			"replacement is nil",
 			cmdReplaceOne,
@@ -362,7 +362,7 @@ func parseReplaceOneParams(params ...any) (any, any) {
 // cmdReplaceByObjId: [bson.D, ] // 1 params
 func parseReplaceByObjIdParams(params ...any) string {
 	if len(params) < 1 {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			"params length < 1",
 			cmdReplaceByObjId,
@@ -373,7 +373,7 @@ func parseReplaceByObjIdParams(params ...any) string {
 	oriOId := params[0]
 	oId, ok := oriOId.(string)
 	if !ok {
-		panic(dberr.NewErr(
+		panic(errors.NewErr(
 			ErrOpParmsErr,
 			fmt.Sprintf("params[0] type must be string, but is %s", reflect.TypeOf(oriOId)),
 			cmdReplaceByObjId,
@@ -388,7 +388,7 @@ func parseReplaceByObjIdParams(params ...any) string {
 // cmdHasCollection: [bool, ] // 1 params
 func parseResultHasCollection(results ...any) (bool, error) {
 	if len(results) < 1 {
-		return false, dberr.NewErr(
+		return false, errors.NewErr(
 			ErrOpResultPraseErr,
 			"results length < 1",
 			cmdHasCollection,
@@ -398,7 +398,7 @@ func parseResultHasCollection(results ...any) (bool, error) {
 	oriData := results[0]
 	data, ok := oriData.(bool)
 	if !ok {
-		return false, dberr.NewErr(
+		return false, errors.NewErr(
 			ErrOpResultPraseErr,
 			fmt.Sprintf("result[0] type must be bool, but is %s", reflect.TypeOf(oriData)),
 			cmdHasCollection,
@@ -417,7 +417,7 @@ func parseResultHasCollection(results ...any) (bool, error) {
 // cmdFind: [[][]byte, ] // 1 params
 func parseResultFind(results ...any) ([][]byte, error) {
 	if len(results) < 1 {
-		return nil, dberr.NewErr(
+		return nil, errors.NewErr(
 			ErrOpResultPraseErr,
 			"results length < 1",
 			cmdFind,
@@ -427,7 +427,7 @@ func parseResultFind(results ...any) ([][]byte, error) {
 	oriDatas := results[0]
 	datas, ok := oriDatas.([][]byte)
 	if !ok {
-		return nil, dberr.NewErr(
+		return nil, errors.NewErr(
 			ErrOpResultPraseErr,
 			fmt.Sprintf("result[0] type must be [][]byte, but is %s", reflect.TypeOf(oriDatas)),
 			cmdFind,
@@ -440,7 +440,7 @@ func parseResultFind(results ...any) ([][]byte, error) {
 // cmdFindAll: [[][]byte, ] // 1 params
 func parseResultFindAll(results ...any) ([][]byte, error) {
 	if len(results) < 1 {
-		return nil, dberr.NewErr(
+		return nil, errors.NewErr(
 			ErrOpResultPraseErr,
 			"results length < 1",
 			cmdFindAll,
@@ -450,7 +450,7 @@ func parseResultFindAll(results ...any) ([][]byte, error) {
 	oriDatas := results[0]
 	datas, ok := oriDatas.([][]byte)
 	if !ok {
-		return nil, dberr.NewErr(
+		return nil, errors.NewErr(
 			ErrOpResultPraseErr,
 			fmt.Sprintf("result[0] type must be [][]byte, but is %s", reflect.TypeOf(oriDatas)),
 			cmdFindAll,
@@ -463,7 +463,7 @@ func parseResultFindAll(results ...any) ([][]byte, error) {
 // cmdFindOne: [[]byte, ] // 1 params
 func parseResultFindOne(results ...any) ([]byte, error) {
 	if len(results) < 1 {
-		return nil, dberr.NewErr(
+		return nil, errors.NewErr(
 			ErrOpResultPraseErr,
 			"results length < 1",
 			cmdFindOne,
@@ -473,7 +473,7 @@ func parseResultFindOne(results ...any) ([]byte, error) {
 	oriData := results[0]
 	datas, ok := oriData.([]byte)
 	if !ok {
-		return nil, dberr.NewErr(
+		return nil, errors.NewErr(
 			ErrOpResultPraseErr,
 			fmt.Sprintf("result[0] type must be []byte, but is %s", reflect.TypeOf(oriData)),
 			cmdFindOne,
@@ -486,7 +486,7 @@ func parseResultFindOne(results ...any) ([]byte, error) {
 // cmdFindByObjId: [[]byte, ] // 1 params
 func parseResultFindByObjId(results ...any) ([]byte, error) {
 	if len(results) < 1 {
-		return nil, dberr.NewErr(
+		return nil, errors.NewErr(
 			ErrOpResultPraseErr,
 			"results length < 1",
 			cmdFindByObjId,
@@ -496,7 +496,7 @@ func parseResultFindByObjId(results ...any) ([]byte, error) {
 	oriData := results[0]
 	datas, ok := oriData.([]byte)
 	if !ok {
-		return nil, dberr.NewErr(
+		return nil, errors.NewErr(
 			ErrOpResultPraseErr,
 			fmt.Sprintf("result[0] type must be []byte, but is %s", reflect.TypeOf(oriData)),
 			cmdFindByObjId,
@@ -509,7 +509,7 @@ func parseResultFindByObjId(results ...any) ([]byte, error) {
 // cmdDelete: [int, ] // 1 params
 func parseResultDelete(results ...any) (int, error) {
 	if len(results) < 1 {
-		return 0, dberr.NewErr(
+		return 0, errors.NewErr(
 			ErrOpResultPraseErr,
 			"results length < 1",
 			cmdDelete,
@@ -519,7 +519,7 @@ func parseResultDelete(results ...any) (int, error) {
 	oriNum := results[0]
 	num, ok := oriNum.(int)
 	if !ok {
-		return 0, dberr.NewErr(
+		return 0, errors.NewErr(
 			ErrOpResultPraseErr,
 			fmt.Sprintf("result[0] type must be int, but is %s", reflect.TypeOf(oriNum)),
 			cmdDelete,
@@ -532,7 +532,7 @@ func parseResultDelete(results ...any) (int, error) {
 // cmdDeleteAll: [int, ] // 1 params
 func parseResultDeleteAll(results ...any) (int, error) {
 	if len(results) < 1 {
-		return 0, dberr.NewErr(
+		return 0, errors.NewErr(
 			ErrOpResultPraseErr,
 			"results length < 1",
 			cmdDeleteAll,
@@ -542,7 +542,7 @@ func parseResultDeleteAll(results ...any) (int, error) {
 	oriNum := results[0]
 	num, ok := oriNum.(int)
 	if !ok {
-		return 0, dberr.NewErr(
+		return 0, errors.NewErr(
 			ErrOpResultPraseErr,
 			fmt.Sprintf("result[0] type must be int, but is %s", reflect.TypeOf(oriNum)),
 			cmdDeleteAll,
@@ -555,7 +555,7 @@ func parseResultDeleteAll(results ...any) (int, error) {
 // cmdDeleteOne: [int, ] // 1 params
 func parseResultDeleteOne(results ...any) (int, error) {
 	if len(results) < 1 {
-		return 0, dberr.NewErr(
+		return 0, errors.NewErr(
 			ErrOpResultPraseErr,
 			"results length < 1",
 			cmdDeleteOne,
@@ -565,7 +565,7 @@ func parseResultDeleteOne(results ...any) (int, error) {
 	oriNum := results[0]
 	num, ok := oriNum.(int)
 	if !ok {
-		return 0, dberr.NewErr(
+		return 0, errors.NewErr(
 			ErrOpResultPraseErr,
 			fmt.Sprintf("result[0] type must be int, but is %s", reflect.TypeOf(oriNum)),
 			cmdDeleteOne,
@@ -578,7 +578,7 @@ func parseResultDeleteOne(results ...any) (int, error) {
 // cmdDeleteByObjId: [int, ] // 1 params
 func parseResultDeleteByObjId(results ...any) (int, error) {
 	if len(results) < 1 {
-		return 0, dberr.NewErr(
+		return 0, errors.NewErr(
 			ErrOpResultPraseErr,
 			"results length < 1",
 			cmdDeleteByObjId,
@@ -588,7 +588,7 @@ func parseResultDeleteByObjId(results ...any) (int, error) {
 	oriNum := results[0]
 	num, ok := oriNum.(int)
 	if !ok {
-		return 0, dberr.NewErr(
+		return 0, errors.NewErr(
 			ErrOpResultPraseErr,
 			fmt.Sprintf("result[0] type must be int, but is %s", reflect.TypeOf(oriNum)),
 			cmdDeleteByObjId,

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/shiimoo/godb/dberr"
+	"github.com/shiimoo/godb/lib/base/errors"
 )
 
 type mgr struct {
@@ -43,12 +43,12 @@ func (m *mgr) Seturl(host string, port int) {
 // 创建失败的参数
 func (m *mgr) Connect(num int) (int, error) {
 	if num <= 0 {
-		return 0, dberr.NewErr(ErrMgoConnNum, "num must > 0")
+		return 0, errors.NewErr(ErrMgoConnNum, "num must > 0")
 	}
 	for i := 0; i < num; i++ {
 		conn, err := NewConn(m.ctx, m.url)
 		if err != nil {
-			return i, dberr.NewErr(ErrMgoConnectErr, err)
+			return i, errors.NewErr(ErrMgoConnectErr, err)
 		}
 		m.addConn(conn)
 	}
@@ -398,7 +398,7 @@ var mp struct {
 func GetMgr(parent context.Context, key string) (*mgr, error) {
 	key = strings.TrimSpace(key)
 	if key == "" {
-		return nil, dberr.NewErr(ErrMgoMgrKey, "key is \"\"")
+		return nil, errors.NewErr(ErrMgoMgrKey, "key is \"\"")
 	}
 	var kMgr *mgr
 	v, ok := mp.Load(key)

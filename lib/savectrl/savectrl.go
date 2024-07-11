@@ -6,7 +6,7 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/shiimoo/godb/dberr"
+	"github.com/shiimoo/godb/lib/base/errors"
 )
 
 func SaveBox(handler func() error) (err error) {
@@ -14,7 +14,7 @@ func SaveBox(handler func() error) (err error) {
 		if r := recover(); r != nil {
 			errInfos := []string{fmt.Sprintf("%v", r)}
 			stackList := strings.Split(string(debug.Stack()), "\n")[7:]
-			err = dberr.NewErr(ErrSaveBoxPanic, strings.Join(append(errInfos, stackList...), "\n"))
+			err = errors.NewErr(ErrSaveBoxPanic, strings.Join(append(errInfos, stackList...), "\n"))
 		}
 	}()
 	return handler()

@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/shiimoo/godb/dberr"
+	"github.com/shiimoo/godb/lib/base/errors"
 	"github.com/shiimoo/godb/lib/savectrl"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -70,13 +70,13 @@ func (c *MgoConn) toDatabase(data any) string {
 	var err error
 	database, ok := data.(string)
 	if !ok {
-		err = dberr.NewErr(
+		err = errors.NewErr(
 			ErrToDatabaseErr,
 			fmt.Sprintf("need type string; but data[%v] type is %s", data, reflect.TypeOf(data)),
 		)
 
 	} else if len(strings.TrimSpace(database)) == 0 {
-		err = dberr.NewErr(
+		err = errors.NewErr(
 			ErrToDatabaseErr,
 			fmt.Sprintf("data[%s] length is zero", data),
 		)
@@ -92,13 +92,13 @@ func (c *MgoConn) toCollection(data any) string {
 	var err error
 	collection, ok := data.(string)
 	if !ok {
-		err = dberr.NewErr(
+		err = errors.NewErr(
 			ErrToCollectionErr,
 			fmt.Sprintf("need type string; but data[%v] type is %s", data, reflect.TypeOf(data)),
 		)
 
 	} else if len(strings.TrimSpace(collection)) == 0 {
-		err = dberr.NewErr(
+		err = errors.NewErr(
 			ErrToCollectionErr,
 			fmt.Sprintf("data[%s] length is zero", data),
 		)
@@ -113,9 +113,9 @@ func (c *MgoConn) toCollection(data any) string {
 func (c *MgoConn) parseParams(params ...any) (database string, collection string, args []any) {
 	var err error
 	if params == nil {
-		err = dberr.NewErr(ErrParamsErr, "params is nil")
+		err = errors.NewErr(ErrParamsErr, "params is nil")
 	} else if len(params) < 2 {
-		err = dberr.NewErr(ErrParamsErr, fmt.Sprintf("params[%v] length < 2", params))
+		err = errors.NewErr(ErrParamsErr, fmt.Sprintf("params[%v] length < 2", params))
 	}
 	if err != nil {
 		panic(err)
@@ -151,7 +151,7 @@ func (c *MgoConn) createIndex(params ...any) *opResult {
 	if _, err := set.Indexes().CreateOne(c.ctx, mongo.IndexModel{
 		Keys: indexs,
 	}); err != nil {
-		result.err = dberr.NewErr(ErrMgoCreateIndexErr, err, database, collection, indexs)
+		result.err = errors.NewErr(ErrMgoCreateIndexErr, err, database, collection, indexs)
 	}
 	return result
 }
@@ -165,7 +165,7 @@ func (c *MgoConn) insertN(params ...any) *opResult {
 	set := c.client.Database(database).Collection(collection)
 	_, err := set.InsertMany(c.ctx, datas)
 	if err != nil {
-		result.err = dberr.NewErr(ErrMgoInsertErr, err, database, collection, datas)
+		result.err = errors.NewErr(ErrMgoInsertErr, err, database, collection, datas)
 	}
 
 	return result
@@ -180,7 +180,7 @@ func (c *MgoConn) insertOne(params ...any) *opResult {
 	set := c.client.Database(database).Collection(collection)
 	_, err := set.InsertOne(c.ctx, data)
 	if err != nil {
-		result.err = dberr.NewErr(ErrMgoInsertErr, err, database, collection, data)
+		result.err = errors.NewErr(ErrMgoInsertErr, err, database, collection, data)
 	}
 
 	return result
@@ -199,7 +199,7 @@ func (c *MgoConn) find(params ...any) *opResult {
 	set := c.client.Database(database).Collection(collection)
 	cur, err := set.Find(c.ctx, filter, opt)
 	if err != nil {
-		result.err = dberr.NewErr(ErrMgoFindErr, err, database, collection, filter, num)
+		result.err = errors.NewErr(ErrMgoFindErr, err, database, collection, filter, num)
 	} else {
 		datas := make([][]byte, 0)
 		for cur.Next(c.ctx) {
@@ -226,7 +226,7 @@ func (c *MgoConn) findOne(params ...any) *opResult {
 	set := c.client.Database(database).Collection(collection)
 	bs, err := set.FindOne(c.ctx, filter).Raw()
 	if err != nil {
-		result.err = dberr.NewErr(ErrMgoFindErr, err, database, collection, filter, 1)
+		result.err = errors.NewErr(ErrMgoFindErr, err, database, collection, filter, 1)
 	} else {
 		result.addResult([]byte(bs))
 	}
@@ -241,7 +241,7 @@ func (c *MgoConn) findByObjId(params ...any) *opResult {
 	oId := parseFindByObjIdParams(params...)
 	_id, err := primitive.ObjectIDFromHex(oId)
 	if err != nil {
-		result.err = dberr.NewErr(ErrMgoObjectErr, oId, err)
+		result.err = errors.NewErr(ErrMgoObjectErr, oId, err)
 		return result
 	}
 	filter := bson.D{
@@ -259,7 +259,7 @@ func (c *MgoConn) delete(params ...any) *opResult {
 	set := c.client.Database(database).Collection(collection)
 	delResult, err := set.DeleteMany(c.ctx, filter)
 	if err != nil {
-		result.err = dberr.NewErr(ErrMgoDeleteErr, err, database, collection, filter)
+		result.err = errors.NewErr(ErrMgoDeleteErr, err, database, collection, filter)
 	} else {
 		result.addResult(int(delResult.DeletedCount))
 	}
@@ -281,7 +281,7 @@ func (c *MgoConn) deleteOne(params ...any) *opResult {
 	set := c.client.Database(database).Collection(collection)
 	delRes, err := set.DeleteOne(c.ctx, filter)
 	if err != nil {
-		result.err = dberr.NewErr(ErrMgoDeleteErr, err, database, collection, filter)
+		result.err = errors.NewErr(ErrMgoDeleteErr, err, database, collection, filter)
 	} else {
 		result.addResult(int(delRes.DeletedCount))
 	}
@@ -296,7 +296,7 @@ func (c *MgoConn) deleteByObjId(params ...any) *opResult {
 	oId := parseDeleteByObjIdParams(params...)
 	_id, err := primitive.ObjectIDFromHex(oId)
 	if err != nil {
-		result.err = dberr.NewErr(ErrMgoObjectErr, oId, err)
+		result.err = errors.NewErr(ErrMgoObjectErr, oId, err)
 		return result
 	}
 
@@ -314,7 +314,7 @@ func (c *MgoConn) update(params ...any) *opResult {
 	filter, data := parseUpdateParams(params...)
 	set := c.client.Database(database).Collection(collection)
 	if _, err := set.UpdateMany(c.ctx, filter, bson.D{{Key: "$set", Value: data}}); err != nil {
-		result.err = dberr.NewErr(ErrMgoUpdateErr, err, database, collection, filter, data)
+		result.err = errors.NewErr(ErrMgoUpdateErr, err, database, collection, filter, data)
 	}
 	return result
 }
@@ -327,7 +327,7 @@ func (c *MgoConn) updateOne(params ...any) *opResult {
 	filter, data := parseUpdateOneParams(params...)
 	set := c.client.Database(database).Collection(collection)
 	if _, err := set.UpdateOne(c.ctx, filter, bson.D{{Key: "$set", Value: data}}); err != nil {
-		result.err = dberr.NewErr(ErrMgoUpdateErr, err, database, collection, filter, data)
+		result.err = errors.NewErr(ErrMgoUpdateErr, err, database, collection, filter, data)
 	}
 	return result
 }
@@ -340,7 +340,7 @@ func (c *MgoConn) updateByObjId(params ...any) *opResult {
 	oId := parseUpdateByObjIdParams(params...)
 	_id, err := primitive.ObjectIDFromHex(oId)
 	if err != nil {
-		result.err = dberr.NewErr(ErrMgoObjectErr, oId, err)
+		result.err = errors.NewErr(ErrMgoObjectErr, oId, err)
 		return result
 	}
 
@@ -358,7 +358,7 @@ func (c *MgoConn) replaceOne(params ...any) *opResult {
 	filter, replacement := parseReplaceOneParams(params...)
 	set := c.client.Database(database).Collection(collection)
 	if _, err := set.ReplaceOne(c.ctx, filter, replacement); err != nil {
-		result.err = dberr.NewErr(ErrMgoReplaceErr, database, err, collection, filter, replacement)
+		result.err = errors.NewErr(ErrMgoReplaceErr, database, err, collection, filter, replacement)
 	}
 	return result
 }
@@ -371,7 +371,7 @@ func (c *MgoConn) replaceByObjId(params ...any) *opResult {
 	oId := parseReplaceByObjIdParams(params...)
 	_id, err := primitive.ObjectIDFromHex(oId)
 	if err != nil {
-		result.err = dberr.NewErr(ErrMgoObjectErr, oId, err)
+		result.err = errors.NewErr(ErrMgoObjectErr, oId, err)
 		return result
 	}
 	filter := bson.D{
@@ -425,7 +425,7 @@ func (c *MgoConn) doOpHandler(opObj *op) error {
 		if found {
 			opObj.resultAccept <- handler(opObj.args...)
 		} else {
-			return dberr.NewErr(
+			return errors.NewErr(
 				ErrToOpErr,
 				fmt.Sprintf("op[%s] not found", opObj.cmd),
 			)

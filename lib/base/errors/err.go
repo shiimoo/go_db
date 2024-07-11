@@ -1,4 +1,4 @@
-package dberr
+package errors
 
 import "fmt"
 
@@ -19,7 +19,7 @@ func (e Err) Format() string {
 }
 
 // IsSameErr 是否体同一错误;
-// 对比的错误需要满足DbErr, 任意一错误不满足，均会判定为不同(false);
+// 对比的错误需要满足Err, 任意一错误不满足，均会判定为不同(false);
 // 该方法比较的是错误模板， 而非错误本身.
 func IsSameErr(errA, errB error) bool {
 	eA, ok := errA.(Err)
