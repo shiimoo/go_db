@@ -2,24 +2,25 @@ package mlog
 
 import (
 	"context"
-	"fmt"
 	"log"
 )
 
 // ***** 日志记录器 *****
 
 // 构建 日志记录器
-func newLogger(ctx context.Context) *logger {
+func newLogger(ctx context.Context, key string) *logger {
 	obj := new(logger)
+	obj.key = key
 	obj.ctx, obj.cancel = context.WithCancel(ctx)
 	obj.outChan = make(chan *Log, 1000)
-	// todo 日志记录器初始化
 	return obj
 }
 
 type logger struct {
-	ctx    context.Context
-	cancel context.CancelFunc
+	key    string             // 唯一标识(id)
+	ctx    context.Context    // 上下文
+	cancel context.CancelFunc // 关闭方法
+
 	// opt // 可选项
 	outChan chan *Log
 	outFunc func(*Log) error
@@ -40,6 +41,9 @@ func (l *logger) Outputf(lv logLv, labels []string, format string, datas ...Data
 
 	l.output(msg)
 }
+func (l *logger) SetOutFunc(handler func(*Log) error) {
+	l.outFunc = handler
+}
 
 func (l *logger) output(msg *Log) {
 	if !l.isOpen {
@@ -47,6 +51,12 @@ func (l *logger) output(msg *Log) {
 		return
 	}
 	l.outChan <- msg
+}
+
+// ***** ServerAPI
+
+func (l *logger) Close() {
+	l.cancel()
 }
 
 func (l *logger) closeCallBack() {
@@ -69,16 +79,18 @@ func (l *logger) _start() {
 			l.closeCallBack()
 			return
 		case msg := <-l.outChan:
-			l._output(msg)
+			if err := l._output(msg); err != nil {
+				log.Println(err)
+			}
 		}
 	}
 }
 
-func (l *logger) _output(msg *Log) {
+func (l *logger) _output(msg *Log) error {
 	// opt 输出选项 todo
-	if l.outFunc != nil {
-		l.outFunc(msg)
-	} else {
-		fmt.Println(msg)
+	if l.outFunc == nil {
+		return ErrLoggerOutFuncIsNil
 	}
+	l.outFunc(msg)
+	return nil
 }

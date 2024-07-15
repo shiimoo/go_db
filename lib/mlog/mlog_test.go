@@ -17,7 +17,8 @@ func TestLogLv(t *testing.T) {
 
 func TestLogMsg(t *testing.T) {
 
-	logger := newLogger(context.Background())
+	logger := newLogger(context.Background(), "default")
+	// logger.
 	logger.Start()
 	logger.Output(Info, []string{"server", "test"}, "log Test")
 	logger.Outputf(Info, []string{"server", "test"}, "log Test %s ", Data{time.Now(), "time"})

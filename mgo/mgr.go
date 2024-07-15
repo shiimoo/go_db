@@ -371,7 +371,6 @@ func (m *mgr) Close() {
 }
 
 func (m *mgr) _close() {
-
 	log.Println("mgr Done")
 }
 
