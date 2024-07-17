@@ -8,10 +8,10 @@ import (
 // ***** 日志记录器 *****
 
 // 构建 日志记录器
-func newLogger(ctx context.Context, key string) *logger {
+func newLogger(parent context.Context, key string) *logger {
 	obj := new(logger)
 	obj.key = key
-	obj.ctx, obj.cancel = context.WithCancel(ctx)
+	obj.ctx, obj.cancel = context.WithCancel(parent)
 	obj.outChan = make(chan *Log, 1000)
 	return obj
 }
@@ -47,7 +47,7 @@ func (l *logger) SetOutFunc(handler func(*Log) error) {
 
 func (l *logger) output(msg *Log) {
 	if !l.isOpen {
-		log.Println(ErrLoggerIsClose)
+		log.Println(l.isOpen, ErrLoggerIsClose)
 		return
 	}
 	l.outChan <- msg
@@ -62,6 +62,10 @@ func (l *logger) Close() {
 func (l *logger) closeCallBack() {
 	l.isOpen = false // 设置关闭状态
 	close(l.outChan) // 关闭channel
+	if l.outFunc == nil {
+		log.Println(11, ErrLoggerOutFuncIsNil)
+		return
+	}
 	for msg := range l.outChan {
 		l._output(msg)
 	}

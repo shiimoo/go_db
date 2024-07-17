@@ -24,3 +24,14 @@ func TestLogMsg(t *testing.T) {
 	logger.Outputf(Info, []string{"server", "test"}, "log Test %s ", Data{time.Now(), "time"})
 	time.Sleep(10 * time.Second)
 }
+
+func TestLogMgr(t *testing.T) {
+	root := context.Background()
+	MgrInit(root)
+	GetMgr().SetOutFunc("login", func(l *Log) error {
+		log.Println(l)
+		return nil
+	})
+	GetMgr().Log("love")
+	time.Sleep(1 * time.Second)
+}
