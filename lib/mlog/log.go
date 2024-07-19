@@ -10,7 +10,7 @@ import (
 func newLog(lv logLv) *Log {
 	msg := new(Log)
 	msg.lv = lv
-	msg.RefreshCreateTime()
+	msg.createTime = time.Now()
 	return msg
 }
 
@@ -26,11 +26,6 @@ type Log struct {
 
 	format string // 日志模版
 	datas  []Data // 日志数据
-}
-
-// RefreshTime 刷新最新的日志时间
-func (l *Log) RefreshCreateTime() {
-	l.createTime = time.Now()
 }
 
 // Time 获取时间

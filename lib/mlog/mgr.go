@@ -3,7 +3,6 @@ package mlog
 import (
 	"context"
 	"log"
-	"os"
 	"sync"
 )
 
@@ -21,11 +20,6 @@ type mgr struct {
 // 添加日志生成器
 func (m *mgr) addLoger(l *logger) {
 	l.Start()
-	l.SetOutFunc(func(msg *Log) error {
-		str := msg.String() + "\n"
-		os.Stdout.WriteString(str)
-		return nil
-	})
 	m.pool.Store(l.key, l)
 }
 

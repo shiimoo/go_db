@@ -28,10 +28,10 @@ func TestLogMsg(t *testing.T) {
 func TestLogMgr(t *testing.T) {
 	root := context.Background()
 	MgrInit(root)
-	GetMgr().SetOutFunc("login", func(l *Log) error {
-		log.Println(l)
-		return nil
-	})
+	// GetMgr().SetOutFunc("server", func(l *Log) error {
+	// 	log.Println(l)
+	// 	return nil
+	// })
 	GetMgr().Log("love")
 	time.Sleep(1 * time.Second)
 }

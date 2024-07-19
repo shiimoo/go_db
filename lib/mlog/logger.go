@@ -30,7 +30,6 @@ type logger struct {
 
 func (l *logger) Output(lv logLv, labels []string, msg string) {
 	l.Outputf(lv, labels, msg)
-
 }
 
 func (l *logger) Outputf(lv logLv, labels []string, format string, datas ...Data) {
@@ -62,10 +61,6 @@ func (l *logger) Close() {
 func (l *logger) closeCallBack() {
 	l.isOpen = false // 设置关闭状态
 	close(l.outChan) // 关闭channel
-	if l.outFunc == nil {
-		log.Println(11, ErrLoggerOutFuncIsNil)
-		return
-	}
 	for msg := range l.outChan {
 		l._output(msg)
 	}
@@ -93,8 +88,7 @@ func (l *logger) _start() {
 func (l *logger) _output(msg *Log) error {
 	// opt 输出选项 todo
 	if l.outFunc == nil {
-		return ErrLoggerOutFuncIsNil
+		return defaultOutFunc(msg)
 	}
-	l.outFunc(msg)
-	return nil
+	return l.outFunc(msg)
 }

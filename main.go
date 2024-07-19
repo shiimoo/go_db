@@ -1,18 +1,12 @@
 package main
 
-import "log"
+import (
+	"fmt"
+	"time"
+)
 
 func main() {
-	a := make(chan any, 1000)
-	a <- 1
-	a <- 1
-	a <- 1
-	a <- 1
-	a <- 1
-	close(a)
-	log.Println(a == nil)
-	a <- 1
-	for i := range a {
-		log.Println(i)
-	}
+	now := time.Now()
+
+	fmt.Println(now.Local().Format("2006-01-02 15:04:05"))
 }
