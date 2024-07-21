@@ -32,6 +32,6 @@ func TestLogMgr(t *testing.T) {
 	// 	log.Println(l)
 	// 	return nil
 	// })
-	GetMgr().Log("love")
+	GetMgr().Println("love")
 	time.Sleep(1 * time.Second)
 }

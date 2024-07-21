@@ -41,8 +41,8 @@ func (m *mgr) SetOutFunc(key string, handler func(l *Log) error) {
 	m.getLoger(key).SetOutFunc(handler)
 }
 
-// Log 默认输出
-func (m *mgr) Log(msg string) {
+// Println 默认输出
+func (m *mgr) Println(msg string) {
 	m.getLoger("server").Output(Info, nil, msg)
 }
 
