@@ -28,18 +28,22 @@ type logger struct {
 	isOpen bool // 开启状态
 }
 
-func (l *logger) Output(lv logLv, labels []string, msg string) {
-	l.Outputf(lv, labels, msg)
+// Output 标准输出
+func (l *logger) Output(lv logLv, label string, msg string) {
+	l.Outputf(lv, label, msg)
 }
 
-func (l *logger) Outputf(lv logLv, labels []string, format string, datas ...Data) {
+// Outputf 格式化标准输出
+func (l *logger) Outputf(lv logLv, label string, format string, datas ...Data) {
 	msg := newLog(lv)
-	msg.AddLabel(labels...)
+	msg.SetLabel(label)
 	msg.SetFormat(format)
 	msg.AddData(datas...)
 
 	l.output(msg)
 }
+
+// SetOutFunc 设置个性化输出方法
 func (l *logger) SetOutFunc(handler func(*Log) error) {
 	l.outFunc = handler
 }

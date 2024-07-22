@@ -2,6 +2,7 @@ package mlog
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -15,14 +16,22 @@ func newLog(lv logLv) *Log {
 }
 
 type Data struct {
-	Value any
 	Key   string
+	Value any
+}
+
+func (d *Data) String() string {
+	if strings.TrimSpace(d.Key) == "" {
+		return fmt.Sprintf("%v", d.Value)
+	} else {
+		return fmt.Sprintf("%s=%s", d.Key, d.Value)
+	}
 }
 
 type Log struct {
 	lv         logLv     // 日志级别
 	createTime time.Time // 日志创建时间
-	labels     []string  // 日志标签列表, 一个日志可能有多个标签, 标签顺序即优先级
+	label      string    // 日志标签
 
 	format string // 日志模版
 	datas  []Data // 日志数据
@@ -33,12 +42,9 @@ func (l *Log) Time() time.Time {
 	return l.createTime
 }
 
-// AddLabel 添加标签
-func (l *Log) AddLabel(labels ...string) {
-	if l.labels == nil {
-		l.labels = make([]string, 0)
-	}
-	l.labels = append(l.labels, labels...)
+// SetLabel 设置标签
+func (l *Log) SetLabel(label string) {
+	l.label = label
 }
 
 // SetFormat 设置模版
@@ -60,10 +66,9 @@ func (l *Log) String() string {
 	if l.datas == nil || len(l.datas) == 0 {
 		return l.format
 	}
-
 	values := make([]any, 0)
 	for _, data := range l.datas {
-		values = append(values, data.Value)
+		values = append(values, data.String())
 	}
 	return fmt.Sprintf(l.format, values...)
 }

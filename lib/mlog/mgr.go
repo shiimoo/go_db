@@ -3,7 +3,12 @@ package mlog
 import (
 	"context"
 	"log"
+	"strings"
 	"sync"
+)
+
+const (
+	DefaultLoggerName = "server"
 )
 
 // ***** 生成管理器 *****
@@ -25,6 +30,19 @@ func (m *mgr) addLoger(l *logger) {
 
 // 获取日志生成器
 func (m *mgr) getLoger(key string) *logger {
+	if strings.ContainsAny(key, "\\/:*?\"<>|") {
+		// todo warn 不得包含字符()
+		key = DefaultLoggerName
+	}
+	key = strings.TrimSpace(key)
+	if key == "" {
+		key = DefaultLoggerName
+	} else {
+		if strings.ContainsAny(key, "\\/:*?\"<>|") {
+			// todo warn 不得包含字符()
+			key = DefaultLoggerName
+		}
+	}
 	var l *logger
 	val, ok := m.pool.Load(key)
 	if !ok {
@@ -43,7 +61,47 @@ func (m *mgr) SetOutFunc(key string, handler func(l *Log) error) {
 
 // Println 默认输出
 func (m *mgr) Println(msg string) {
-	m.getLoger("server").Output(Info, nil, msg)
+	m.getLoger(DefaultLoggerName).Output(Info, "", msg)
+}
+
+func (m *mgr) Debug(mod, label, msg string) {
+	m.Debugf(mod, label, msg)
+}
+
+func (m *mgr) Debugf(mod, label, format string, datas ...Data) {
+	m.getLoger(mod).Outputf(Debug, label, format, datas...)
+}
+
+func (m *mgr) Info(mod, label, msg string) {
+	m.Infof(mod, label, msg)
+}
+
+func (m *mgr) Infof(mod, label, format string, datas ...Data) {
+	m.getLoger(mod).Outputf(Info, label, format, datas...)
+}
+
+func (m *mgr) Warn(mod, label, msg string) {
+	m.Warnf(mod, label, msg)
+}
+
+func (m *mgr) Warnf(mod, label, format string, datas ...Data) {
+	m.getLoger(mod).Outputf(Warn, label, format, datas...)
+}
+
+func (m *mgr) Error(mod, label, msg string) {
+	m.Errorf(mod, label, msg)
+}
+
+func (m *mgr) Errorf(mod, label, format string, datas ...Data) {
+	m.getLoger(mod).Outputf(Error, label, format, datas...)
+}
+
+func (m *mgr) Fatal(mod, label, msg string) {
+	m.Errorf(mod, label, msg)
+}
+
+func (m *mgr) Fatalf(mod, label, format string, datas ...Data) {
+	m.getLoger(mod).Outputf(Fatal, label, format, datas...)
 }
 
 // ***** Service API *****
