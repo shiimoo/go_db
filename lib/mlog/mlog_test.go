@@ -8,11 +8,11 @@ import (
 )
 
 func TestLogLv(t *testing.T) {
-	log.Println(Debug.String(), 1)
-	log.Println(Info.String(), 1)
-	log.Println(Warn.String(), 1)
-	log.Println(Error.String(), 1)
-	log.Println(Fatal.String(), 1)
+	log.Println(LvDebug.String(), 1)
+	log.Println(LvInfo.String(), 1)
+	log.Println(LvWarn.String(), 1)
+	log.Println(LvError.String(), 1)
+	log.Println(LvFatal.String(), 1)
 }
 
 func TestLogMsg(t *testing.T) {
@@ -20,8 +20,8 @@ func TestLogMsg(t *testing.T) {
 	logger := newLogger(context.Background(), "default")
 	// logger.
 	logger.Start()
-	logger.Output(Info, "test", "log Test")
-	logger.Outputf(Info, "test", "log Test %s ", Data{"time", time.Now()})
+	logger.Output(LvInfo, "test", "log Test")
+	logger.Outputf(LvInfo, "test", "log Test %s ", Data{"time", time.Now()})
 	time.Sleep(10 * time.Second)
 }
 

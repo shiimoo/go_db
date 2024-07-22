@@ -30,10 +30,6 @@ func (m *mgr) addLoger(l *logger) {
 
 // 获取日志生成器
 func (m *mgr) getLoger(key string) *logger {
-	if strings.ContainsAny(key, "\\/:*?\"<>|") {
-		// todo warn 不得包含字符()
-		key = DefaultLoggerName
-	}
 	key = strings.TrimSpace(key)
 	if key == "" {
 		key = DefaultLoggerName
@@ -61,7 +57,7 @@ func (m *mgr) SetOutFunc(key string, handler func(l *Log) error) {
 
 // Println 默认输出
 func (m *mgr) Println(msg string) {
-	m.getLoger(DefaultLoggerName).Output(Info, "", msg)
+	m.getLoger(DefaultLoggerName).Output(LvInfo, "", msg)
 }
 
 func (m *mgr) Debug(mod, label, msg string) {
@@ -69,7 +65,7 @@ func (m *mgr) Debug(mod, label, msg string) {
 }
 
 func (m *mgr) Debugf(mod, label, format string, datas ...Data) {
-	m.getLoger(mod).Outputf(Debug, label, format, datas...)
+	m.getLoger(mod).Outputf(LvDebug, label, format, datas...)
 }
 
 func (m *mgr) Info(mod, label, msg string) {
@@ -77,7 +73,7 @@ func (m *mgr) Info(mod, label, msg string) {
 }
 
 func (m *mgr) Infof(mod, label, format string, datas ...Data) {
-	m.getLoger(mod).Outputf(Info, label, format, datas...)
+	m.getLoger(mod).Outputf(LvInfo, label, format, datas...)
 }
 
 func (m *mgr) Warn(mod, label, msg string) {
@@ -85,7 +81,7 @@ func (m *mgr) Warn(mod, label, msg string) {
 }
 
 func (m *mgr) Warnf(mod, label, format string, datas ...Data) {
-	m.getLoger(mod).Outputf(Warn, label, format, datas...)
+	m.getLoger(mod).Outputf(LvWarn, label, format, datas...)
 }
 
 func (m *mgr) Error(mod, label, msg string) {
@@ -93,15 +89,15 @@ func (m *mgr) Error(mod, label, msg string) {
 }
 
 func (m *mgr) Errorf(mod, label, format string, datas ...Data) {
-	m.getLoger(mod).Outputf(Error, label, format, datas...)
+	m.getLoger(mod).Outputf(LvError, label, format, datas...)
 }
 
 func (m *mgr) Fatal(mod, label, msg string) {
-	m.Errorf(mod, label, msg)
+	m.Fatalf(mod, label, msg)
 }
 
 func (m *mgr) Fatalf(mod, label, format string, datas ...Data) {
-	m.getLoger(mod).Outputf(Fatal, label, format, datas...)
+	m.getLoger(mod).Outputf(LvFatal, label, format, datas...)
 }
 
 // ***** Service API *****
