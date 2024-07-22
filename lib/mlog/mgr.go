@@ -35,7 +35,7 @@ func (m *mgr) getLoger(key string) *logger {
 		key = DefaultLoggerName
 	} else {
 		if strings.ContainsAny(key, "\\/:*?\"<>|") {
-			// todo warn 不得包含字符()
+			m.Warn("logger", "", "key cannot include \"\\/:*?\"<>|\"")
 			key = DefaultLoggerName
 		}
 	}

@@ -1,6 +1,5 @@
 package mlog
 
-// ***** todo 日志格式参数 *****
 // Println 默认输出
 func Println(msg string) {
 	GetMgr().Println(msg)

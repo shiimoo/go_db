@@ -90,7 +90,6 @@ func (l *logger) _start() {
 }
 
 func (l *logger) _output(msg *Log) error {
-	// opt 输出选项 todo
 	if l.outFunc == nil {
 		return defaultOutFunc(msg)
 	}

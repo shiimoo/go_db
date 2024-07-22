@@ -85,10 +85,10 @@ func (m *mgr) newOp(cmd, database, collection string) *op {
 // HasCollection 判定数据库database中是否存在集合collection
 func (m *mgr) HasCollection(database, collection string) (bool, error) {
 	opObj := m.newOp(cmdHasCollection, database, collection)
-	if err := m.getConn().sendOp(opObj); err != nil {
+	err, result := m.getConn().sendOp(opObj)
+	if err != nil {
 		return false, err
 	}
-	result := opObj.getResult()
 
 	data, err := parseResultHasCollection(result.results...)
 	if err != nil {
@@ -101,10 +101,10 @@ func (m *mgr) HasCollection(database, collection string) (bool, error) {
 func (m *mgr) CreateIndex(database, collection string, indexs Indexs) error {
 	opObj := m.newOp(cmdCreateIndex, database, collection)
 	opObj.append(indexs)
-	if err := m.getConn().sendOp(opObj); err != nil {
+	err, result := m.getConn().sendOp(opObj)
+	if err != nil {
 		return err
 	}
-	result := opObj.getResult()
 	if result.err != nil {
 		return result.err
 	}
@@ -115,10 +115,10 @@ func (m *mgr) CreateIndex(database, collection string, indexs Indexs) error {
 func (m *mgr) InsertN(database, collection string, datas []any) error {
 	opObj := m.newOp(cmdInsertN, database, collection)
 	opObj.append(datas)
-	if err := m.getConn().sendOp(opObj); err != nil {
+	err, result := m.getConn().sendOp(opObj)
+	if err != nil {
 		return err
 	}
-	result := opObj.getResult()
 	if result.err != nil {
 		return result.err
 	}
@@ -129,10 +129,10 @@ func (m *mgr) InsertN(database, collection string, datas []any) error {
 func (m *mgr) InsertOne(database, collection string, data any) error {
 	opObj := m.newOp(cmdInsertOne, database, collection)
 	opObj.append(data)
-	if err := m.getConn().sendOp(opObj); err != nil {
+	err, result := m.getConn().sendOp(opObj)
+	if err != nil {
 		return err
 	}
-	result := opObj.getResult()
 	if result.err != nil {
 		return result.err
 	}
@@ -143,10 +143,10 @@ func (m *mgr) InsertOne(database, collection string, data any) error {
 func (m *mgr) Find(database, collection string, filter any, num int64) ([][]byte, error) {
 	opObj := m.newOp(cmdFind, database, collection)
 	opObj.append(filter, num)
-	if err := m.getConn().sendOp(opObj); err != nil {
+	err, result := m.getConn().sendOp(opObj)
+	if err != nil {
 		return nil, err
 	}
-	result := opObj.getResult()
 	if result.err != nil {
 		return nil, result.err
 	}
@@ -160,10 +160,10 @@ func (m *mgr) Find(database, collection string, filter any, num int64) ([][]byte
 // FindAll 查找全部数据
 func (m *mgr) FindAll(database, collection string) ([][]byte, error) {
 	opObj := m.newOp(cmdFindAll, database, collection)
-	if err := m.getConn().sendOp(opObj); err != nil {
+	err, result := m.getConn().sendOp(opObj)
+	if err != nil {
 		return nil, err
 	}
-	result := opObj.getResult()
 	if result.err != nil {
 		return nil, result.err
 	}
@@ -178,10 +178,10 @@ func (m *mgr) FindAll(database, collection string) ([][]byte, error) {
 func (m *mgr) FindOne(database, collection string, filter any) ([]byte, error) {
 	opObj := m.newOp(cmdFindOne, database, collection)
 	opObj.append(filter)
-	if err := m.getConn().sendOp(opObj); err != nil {
+	err, result := m.getConn().sendOp(opObj)
+	if err != nil {
 		return nil, err
 	}
-	result := opObj.getResult()
 	if result.err != nil {
 		return nil, result.err
 	}
@@ -196,10 +196,10 @@ func (m *mgr) FindOne(database, collection string, filter any) ([]byte, error) {
 func (m *mgr) FindByObjId(database, collection, oId string) ([]byte, error) {
 	opObj := m.newOp(cmdFindByObjId, database, collection)
 	opObj.append(oId)
-	if err := m.getConn().sendOp(opObj); err != nil {
+	err, result := m.getConn().sendOp(opObj)
+	if err != nil {
 		return nil, err
 	}
-	result := opObj.getResult()
 	if result.err != nil {
 		return nil, result.err
 	}
@@ -214,10 +214,10 @@ func (m *mgr) FindByObjId(database, collection, oId string) ([]byte, error) {
 func (m *mgr) Delete(database, collection string, filter any) (int, error) {
 	opObj := m.newOp(cmdDelete, database, collection)
 	opObj.append(filter)
-	if err := m.getConn().sendOp(opObj); err != nil {
+	err, result := m.getConn().sendOp(opObj)
+	if err != nil {
 		return 0, err
 	}
-	result := opObj.getResult()
 	if result.err != nil {
 		return 0, result.err
 	}
@@ -232,10 +232,10 @@ func (m *mgr) Delete(database, collection string, filter any) (int, error) {
 func (m *mgr) DeleteAll(database, collection string, filter any) (int, error) {
 	opObj := m.newOp(cmdDeleteAll, database, collection)
 	opObj.append(filter)
-	if err := m.getConn().sendOp(opObj); err != nil {
+	err, result := m.getConn().sendOp(opObj)
+	if err != nil {
 		return 0, err
 	}
-	result := opObj.getResult()
 	if result.err != nil {
 		return 0, result.err
 	}
@@ -250,10 +250,10 @@ func (m *mgr) DeleteAll(database, collection string, filter any) (int, error) {
 func (m *mgr) DeleteOne(database, collection string, filter any) (int, error) {
 	opObj := m.newOp(cmdDeleteOne, database, collection)
 	opObj.append(filter)
-	if err := m.getConn().sendOp(opObj); err != nil {
+	err, result := m.getConn().sendOp(opObj)
+	if err != nil {
 		return 0, err
 	}
-	result := opObj.getResult()
 	if result.err != nil {
 		return 0, result.err
 	}
@@ -268,10 +268,10 @@ func (m *mgr) DeleteOne(database, collection string, filter any) (int, error) {
 func (m *mgr) DeleteByObjId(database, collection, oId string) (int, error) {
 	opObj := m.newOp(cmdDeleteByObjId, database, collection)
 	opObj.append(oId)
-	if err := m.getConn().sendOp(opObj); err != nil {
+	err, result := m.getConn().sendOp(opObj)
+	if err != nil {
 		return 0, err
 	}
-	result := opObj.getResult()
 	if result.err != nil {
 		return 0, result.err
 	}
@@ -286,10 +286,10 @@ func (m *mgr) DeleteByObjId(database, collection, oId string) (int, error) {
 func (m *mgr) Update(database, collection string, filter, data any) error {
 	opObj := m.newOp(cmdUpdate, database, collection)
 	opObj.append(filter, data)
-	if err := m.getConn().sendOp(opObj); err != nil {
+	err, result := m.getConn().sendOp(opObj)
+	if err != nil {
 		return err
 	}
-	result := opObj.getResult()
 	if result.err != nil {
 		return result.err
 	}
@@ -300,10 +300,10 @@ func (m *mgr) Update(database, collection string, filter, data any) error {
 func (m *mgr) UpdateOne(database, collection string, filter, data any) error {
 	opObj := m.newOp(cmdUpdateOne, database, collection)
 	opObj.append(filter, data)
-	if err := m.getConn().sendOp(opObj); err != nil {
+	err, result := m.getConn().sendOp(opObj)
+	if err != nil {
 		return err
 	}
-	result := opObj.getResult()
 	if result.err != nil {
 		return result.err
 	}
@@ -314,10 +314,10 @@ func (m *mgr) UpdateOne(database, collection string, filter, data any) error {
 func (m *mgr) UpdateByObjId(database, collection, oId string, data any) error {
 	opObj := m.newOp(cmdUpdateByObjId, database, collection)
 	opObj.append(oId, data)
-	if err := m.getConn().sendOp(opObj); err != nil {
+	err, result := m.getConn().sendOp(opObj)
+	if err != nil {
 		return err
 	}
-	result := opObj.getResult()
 	if result.err != nil {
 		return result.err
 	}
@@ -328,10 +328,10 @@ func (m *mgr) UpdateByObjId(database, collection, oId string, data any) error {
 func (m *mgr) ReplaceOne(database, collection string, filter, replacement any) error {
 	opObj := m.newOp(cmdReplaceOne, database, collection)
 	opObj.append(filter, replacement)
-	if err := m.getConn().sendOp(opObj); err != nil {
+	err, result := m.getConn().sendOp(opObj)
+	if err != nil {
 		return err
 	}
-	result := opObj.getResult()
 	if result.err != nil {
 		return result.err
 	}
@@ -342,10 +342,10 @@ func (m *mgr) ReplaceOne(database, collection string, filter, replacement any) e
 func (m *mgr) ReplaceByObjId(database, collection string, oId string, replacement any) error {
 	opObj := m.newOp(cmdReplaceByObjId, database, collection)
 	opObj.append(oId, replacement)
-	if err := m.getConn().sendOp(opObj); err != nil {
+	err, result := m.getConn().sendOp(opObj)
+	if err != nil {
 		return err
 	}
-	result := opObj.getResult()
 	if result.err != nil {
 		return result.err
 	}

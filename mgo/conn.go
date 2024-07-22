@@ -3,12 +3,12 @@ package mgo
 import (
 	"context"
 	"fmt"
-	"log"
 	"reflect"
 	"strings"
 
 	"github.com/shiimoo/godb/lib/base/errors"
 	"github.com/shiimoo/godb/lib/base/savectrl"
+	"github.com/shiimoo/godb/lib/mlog"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -392,8 +392,7 @@ func (c *MgoConn) closeCallBack() {
 	// 循环检出channel, 处理剩余指令
 	for opObj := range c.opChan {
 		if err := c.doOpHandler(opObj); err != nil {
-			// todo 错误日志打印# 日志模块完善
-			log.Println(err)
+			mlog.Warn("mongo", "cmd", err.Error())
 		}
 	}
 }
@@ -411,8 +410,7 @@ func (c *MgoConn) _start() {
 			return
 		case opObj := <-c.opChan:
 			if err := c.doOpHandler(opObj); err != nil {
-				// todo 错误日志打印# 日志模块完善
-				log.Println(err)
+				mlog.Warn("mongo", "cmd", err.Error())
 			}
 		}
 	}
@@ -434,10 +432,10 @@ func (c *MgoConn) doOpHandler(opObj *op) error {
 	})
 }
 
-func (c *MgoConn) sendOp(opObj *op) error {
+func (c *MgoConn) sendOp(opObj *op) (error, *opResult) {
 	if !c.isOpen {
-		return ErrConnIsClose
+		return ErrConnIsClose, nil
 	}
 	c.opChan <- opObj
-	return nil
+	return nil, <-opObj.resultAccept
 }

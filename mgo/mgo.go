@@ -45,8 +45,3 @@ func newOp(cmd string) *op {
 func (o *op) append(args ...any) {
 	o.args = append(o.args, args...)
 }
-
-// 参数出栈
-func (o *op) getResult() *opResult { // todo 该方法扔到sendOp里集成
-	return <-o.resultAccept
-}
