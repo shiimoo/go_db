@@ -1,12 +1,7 @@
 package main
 
-import (
-	"fmt"
-	"time"
-)
+import "fmt"
 
 func main() {
-	now := time.Now()
-
-	fmt.Println(now.Local().Format("2006-01-02 15:04:05"))
+	fmt.Println(-1 ^ (-1 << 5))
 }

@@ -24,7 +24,7 @@ func (d *Data) String() string {
 	if strings.TrimSpace(d.Key) == "" {
 		return fmt.Sprintf("%v", d.Value)
 	} else {
-		return fmt.Sprintf("%s=%s", d.Key, d.Value)
+		return fmt.Sprintf("%s=%v", d.Key, d.Value)
 	}
 }
 

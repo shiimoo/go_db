@@ -139,5 +139,8 @@ func MgrInit(parent context.Context) {
 }
 
 func GetMgr() *mgr {
+	if uniqueMgr == nil {
+		MgrInit(context.Background())
+	}
 	return uniqueMgr
 }
