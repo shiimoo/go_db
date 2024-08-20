@@ -2,32 +2,33 @@ package main
 
 import (
 	"log"
-	"net/url"
+	"net"
+	"time"
 
-	"github.com/gorilla/websocket"
+	"github.com/shiimoo/godb/lib/base/util"
 )
 
 func main() {
-	u := url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/ws"}
-	log.Printf("Connecting to %s", u.String())
-
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
-	if err != nil {
-		log.Fatal("Failed to connect to WebSocket server:", err)
+	bs := []byte{
+		1, 2, 3, 4, 5, 6, 7, 8, 1,
+		1, 2, 3, 4, 5, 6, 7, 8, 2,
+		1, 2, 3, 4, 5, 6, 7, 8, 3,
+		1, 2, 3, 4, 5, 6, 7, 8, 4,
+		1, 2, 3, 4, 5, 6, 7, 8, 5,
 	}
-	defer c.Close()
-
-	err = c.WriteMessage(websocket.TextMessage, []byte("Hello from client!"))
+	linkObj, err := net.Dial("tcp", "127.0.0.1:8080")
 	if err != nil {
-		log.Println("Failed to send message:", err)
-		return
+		log.Fatal(err)
 	}
-
-	_, msg, err := c.ReadMessage()
-	if err != nil {
-		log.Println("Failed to receive message:", err)
-		return
+	subPacks := util.SubPack(bs)
+	max := uint(len(subPacks))
+	for index, b := range subPacks {
+		msg := make([]byte, 0)
+		msg = append(msg, util.UintToBytes(max, 16)...)
+		msg = append(msg, util.UintToBytes(uint(index+1), 16)...)
+		msg = append(msg, util.UintToBytes(uint(len(b)), 16)...)
+		msg = append(msg, b...)
+		linkObj.Write(msg)
 	}
-
-	log.Printf("Received message from server: %s", msg)
+	time.Sleep(1000 * time.Second)
 }

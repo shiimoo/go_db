@@ -67,7 +67,7 @@ func (s *TcpServer) removeLinkObj(linkObj *TcpLink, err error) {
 }
 
 func (s *TcpServer) Dispatch(bs []byte) {
-	fmt.Println("todo 接受到的数据处理", bs)
+	fmt.Println("todo 接受到的数据处理", len(bs), bs)
 }
 
 // Service interface

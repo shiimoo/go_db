@@ -72,7 +72,6 @@ func (l *TcpLink) Read() ([]byte, error) {
 		return nil, err
 	}
 	packNum := util.BytesToUint(packNumBuf)
-
 	// 当前包体序号([2]byte)
 	packIndexBuf := make([]byte, 2)
 	_, err = l.read(packIndexBuf)
@@ -94,23 +93,24 @@ func (l *TcpLink) Read() ([]byte, error) {
 
 	// 包体字节流(最大[65535]byte)
 	msgBuf := make([]byte, packSize)
-	n, err := l.read(packSizeBuf)
+	n, err := l.read(msgBuf)
 	if err != nil {
 		return nil, err
 	}
 	if uint(n) != packSize {
 		return nil, errors.NewErr(ErrTcpLinkPackSizeError, packSize, n)
 	}
+	if l.msgPackBytes == nil {
+		l.msgPackBytes = msgBuf
+	} else {
+		l.msgPackBytes = append(l.msgPackBytes, msgBuf...)
+	}
+
 	if packNum == packIndex {
 		bs := l.msgPackBytes
 		l.clear()
 		l.msgCount += 1
 		return bs, nil // 接受完毕
-	}
-	if l.msgPackBytes == nil {
-		l.msgPackBytes = msgBuf
-	} else {
-		l.msgPackBytes = append(l.msgPackBytes, msgBuf...)
 	}
 	return l.Read()
 }
