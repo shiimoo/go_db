@@ -1,27 +1,22 @@
 package main
 
 import (
-	"net"
+	"context"
 
 	"github.com/shiimoo/godb/lib/mlog"
+	"github.com/shiimoo/godb/network/tcp"
 )
 
 func main() {
-	listenAddr, err := net.ResolveTCPAddr("tcp", "0.0.0.0:8080")
-	if err != nil {
-		mlog.Fatal("tcp", "addr", err.Error())
-	}
+	closeChan := make(chan any, 1)
 
-	tcpListener, err := net.ListenTCP("tcp", listenAddr)
-	if err != nil {
-		mlog.Fatal("tcp", "listen", err.Error())
-	}
-	for {
-		tcpConn, err := tcpListener.AcceptTCP()
-		if err != nil {
-			mlog.Fatal("tcp", "acceptTCP", err.Error())
-		}
-		tcpConn.Read()
-	}
+	rootCtx := context.Background()
 
+	server, err := tcp.NewServer(rootCtx, ":8080")
+	if err != nil {
+		mlog.Fatal("game", "start", err.Error())
+	}
+	server.Start()
+
+	<-closeChan
 }

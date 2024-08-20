@@ -2,6 +2,7 @@ package tcp
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"sync"
 
@@ -40,11 +41,12 @@ func NewServer(parent context.Context, address string) (*TcpServer, error) {
 	server.BaseService = service.NewService(parent, "TcpServer") // todo 名称规范待定
 	server.listenAddr = listenAddr
 	server.listener = tcpListener
+	server.links = make(map[uint]*TcpLink)
 	return server, nil
 }
 
 func (s *TcpServer) createLinkObj(baseLink *net.TCPConn) {
-	linkObj := NewLink(s.Context(), baseLink, uint(snowflake.Gen()))
+	linkObj := NewLink(s.Context(), s, baseLink, uint(snowflake.Gen()))
 	s.addLinkObj(linkObj)
 	linkObj.Start()
 }
@@ -55,28 +57,39 @@ func (s *TcpServer) addLinkObj(linkObj *TcpLink) {
 	s.links[linkObj.Key()] = linkObj
 }
 
-// Service interface
+func (s *TcpServer) removeLinkObj(linkObj *TcpLink, err error) {
+	s.linkMu.Lock()
+	defer s.linkMu.Unlock()
+	delete(s.links, linkObj.Key())
 
-func (s *TcpServer) Start() error {
-	for {
-		select {
-		case <-s.Context().Done():
-		default:
-			// 监听链接
-			tcpConn, err := s.listener.AcceptTCP()
-			if err != nil {
-				mlog.Warn("tcp", "acceptTCP", err.Error())
-			} else {
-				s.createLinkObj(tcpConn)
-			}
-		}
-	}
+	fmt.Println("关闭链接 ", linkObj.Key(), err)
+	linkObj.Stop()
 }
 
-// func (s *TcpServer) Stop() error {
-// 	panic(" Service Sub Class need to realize Service interface func Stop() error")
-// }
+func (s *TcpServer) Dispatch(bs []byte) {
+	fmt.Println("todo 接受到的数据处理", bs)
+}
 
-// func (s *TcpServer) Close() error {
-// 	panic(" Service Sub Class need to realize Service interface func Close() error")
-// }
+// Service interface
+
+func (s *TcpServer) Start() {
+	go func() {
+		for {
+			select {
+			case <-s.Context().Done():
+				s.Close()
+				return
+			default:
+				// 监听链接
+				tcpConn, err := s.listener.AcceptTCP()
+				if err != nil {
+					mlog.Warn("tcp", "acceptTCP", err.Error())
+				} else {
+					s.createLinkObj(tcpConn)
+				}
+			}
+		}
+	}()
+}
+func (s *TcpServer) Close() {
+}

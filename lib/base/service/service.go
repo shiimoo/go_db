@@ -6,9 +6,9 @@ import (
 
 type Service interface {
 	Context() context.Context // 获取上下文
-	Start() error             // 开启服务: 服务创建之后运行
-	Stop() error              // 停止服务：停止服务逻辑
-	Close() error             // 销毁服务: 关闭服务之后执行
+	Start()                   // 开启服务: 服务创建之后运行
+	Stop()                    // 停止服务：停止服务逻辑
+	Close()                   // 停止后销毁时调度
 }
 
 // BaseService 服务基类
@@ -32,14 +32,13 @@ func (s *BaseService) Context() context.Context {
 	return s.ctx
 }
 
-func (s *BaseService) Start() error {
+func (s *BaseService) Start() {
 	panic(" Service Sub Class need to realize Service interface func Start() error")
 }
 
-func (s *BaseService) Stop() error {
-	panic(" Service Sub Class need to realize Service interface func Stop() error")
+func (s *BaseService) Stop() {
+	s.cancel()
 }
 
-func (s *BaseService) Close() error {
-	panic(" Service Sub Class need to realize Service interface func Close() error")
+func (s *BaseService) Close() {
 }
