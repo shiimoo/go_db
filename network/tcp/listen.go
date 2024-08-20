@@ -18,12 +18,13 @@ type TcpServer struct {
 
 	listenAddr *net.TCPAddr     // 监听地址
 	listener   *net.TCPListener // 监听器
+	key        string           // 标识符
 
 	linkMu sync.RWMutex      // 管理锁
 	links  map[uint]*TcpLink // 链接管理
 }
 
-func NewServer(parent context.Context, address string) (*TcpServer, error) {
+func NewServer(parent context.Context, key, address string) (*TcpServer, error) {
 	// @param address "0.0.0.0:8080"
 
 	var server *TcpServer = nil
@@ -38,9 +39,10 @@ func NewServer(parent context.Context, address string) (*TcpServer, error) {
 	}
 	// create
 	server = new(TcpServer)
-	server.BaseService = service.NewService(parent, "TcpServer") // todo 名称规范待定
+	server.BaseService = service.NewService(parent, fmt.Sprintf("TcpServer_%s", key))
 	server.listenAddr = listenAddr
 	server.listener = tcpListener
+	server.key = key
 	server.links = make(map[uint]*TcpLink)
 	return server, nil
 }
@@ -91,5 +93,6 @@ func (s *TcpServer) Start() {
 		}
 	}()
 }
+
 func (s *TcpServer) Close() {
 }

@@ -24,7 +24,7 @@ type TcpLink struct {
 
 func NewLink(parent context.Context, tcpServer *TcpServer, baseLink *net.TCPConn, id uint) *TcpLink {
 	link := new(TcpLink)
-	link.BaseService = service.NewService(parent, fmt.Sprintf("TcpLink_%d", id)) // todo 名称规范待定
+	link.BaseService = service.NewService(parent, fmt.Sprintf("TcpLink_%d", id))
 	link.tcpServer = tcpServer
 	link.id = id
 	link.baseLink = baseLink

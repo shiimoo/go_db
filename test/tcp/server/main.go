@@ -12,7 +12,7 @@ func main() {
 
 	rootCtx := context.Background()
 
-	server, err := tcp.NewServer(rootCtx, ":8080")
+	server, err := tcp.NewServer(rootCtx, "test", ":8080")
 	if err != nil {
 		mlog.Fatal("game", "start", err.Error())
 	}
