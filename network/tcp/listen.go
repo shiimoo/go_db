@@ -43,10 +43,10 @@ func NewServer(parent context.Context, address string) (*TcpServer, error) {
 	return server, nil
 }
 
-func (s *TcpServer) createLinkObj(baseLink *net.TCPConn) *TcpLink {
+func (s *TcpServer) createLinkObj(baseLink *net.TCPConn) {
 	linkObj := NewLink(s.Context(), baseLink, uint(snowflake.Gen()))
 	s.addLinkObj(linkObj)
-	return linkObj
+	linkObj.Start()
 }
 
 func (s *TcpServer) addLinkObj(linkObj *TcpLink) {
@@ -67,20 +67,7 @@ func (s *TcpServer) Start() error {
 			if err != nil {
 				mlog.Warn("tcp", "acceptTCP", err.Error())
 			} else {
-				// 创建link结构
-				linkObj := s.createLinkObj(tcpConn)
-				// 循环读取
-				// bs := make([]byte, 1024)
-
-				// n, err := tcpConn.Read(bs)
-				// if err != nil {
-				// 	mlog.Warn("tcp", "acceptTCP", err.Error())
-				// } else {
-				// 	bs = bs[:n]
-				// }
-				// mlog.Infof("tcp", "", "%s-%s", []mlog.Data{
-				// 	{Key: "data", Value: string(bs)}, {Key: "n", Value: n},
-				// }...)
+				s.createLinkObj(tcpConn)
 			}
 		}
 	}

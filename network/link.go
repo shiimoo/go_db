@@ -4,7 +4,8 @@ import "github.com/shiimoo/godb/lib/base/service"
 
 type Link interface {
 	service.Service
-	Key() any              // 标识格式待定
+	Key() any // 标识格式待定
+
 	Read() ([]byte, error) // 读取数据
 	Write([]byte) error    // 写入数据
 }
