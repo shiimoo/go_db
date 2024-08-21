@@ -1,27 +1,36 @@
-package tcp
+package network
 
 import (
 	"context"
 	"fmt"
 	"net"
-	"sync"
 
 	"github.com/shiimoo/godb/lib/base/errors"
 	"github.com/shiimoo/godb/lib/base/service"
 	"github.com/shiimoo/godb/lib/base/snowflake"
 	"github.com/shiimoo/godb/lib/mlog"
-	"github.com/shiimoo/godb/network"
 )
+
+type TcpLink struct {
+	*baseLink
+
+	// tcpServer *tcp.TcpServer // 归属的tcp服务 todo listen
+}
+
+func NewLink(parent context.Context, baseLink *net.TCPConn, id uint) *TcpLink {
+	link := new(TcpLink)
+	link.baseLink = newBaseLink(parent, baseLink)
+	// link.tcpServer = tcpServer
+	return link
+}
+
+func (l *TcpLink) Key() uint {
+	return l.ID()
+}
 
 // TcpServer tcp服务
 type TcpServer struct {
-	*service.BaseService
-
-	listener *net.TCPListener // 监听器
-	key      string           // 标识符
-
-	linkMu sync.RWMutex              // 管理锁
-	links  map[uint]*network.TcpLink // 链接管理
+	*baseListenServer
 }
 
 func NewServer(parent context.Context, key, address string) (*TcpServer, error) {

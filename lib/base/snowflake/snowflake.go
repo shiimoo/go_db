@@ -82,3 +82,7 @@ func SetWorkerID(workerID int64) {
 func Gen() int64 {
 	return getUnique().Gen()
 }
+
+func GenUint() uint {
+	return uint(Gen())
+}
