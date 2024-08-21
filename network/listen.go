@@ -35,12 +35,7 @@ func newBaseListenServer(parent context.Context, address string) (*baseListenSer
 
 	serverObj := new(baseListenServer)
 	netType := serverObj.NetType()
-	listenAddr, err := net.ResolveTCPAddr(netType, address)
-	if err != nil {
-		return nil, errors.NewErr(ErrListenAddrError, netType, address, err)
-	}
-
-	listener, err := net.ListenTCP(netType, listenAddr)
+	listener, err := net.Listen(netType, address)
 	if err != nil {
 		return nil, errors.NewErr(ErrCreateListenError, netType, err)
 	}

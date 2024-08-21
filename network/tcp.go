@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/shiimoo/godb/lib/base/errors"
-	"github.com/shiimoo/godb/lib/base/service"
 	"github.com/shiimoo/godb/lib/base/snowflake"
 	"github.com/shiimoo/godb/lib/mlog"
 )
@@ -28,59 +26,53 @@ func (l *TcpLink) Key() uint {
 	return l.ID()
 }
 
-// TcpServer tcp服务
-type TcpServer struct {
+// TcpListenServer tcp服务
+type TcpListenServer struct {
 	*baseListenServer
 }
 
-func NewServer(parent context.Context, key, address string) (*TcpServer, error) {
+func NewServer(parent context.Context, key, address string) (*TcpListenServer, error) {
 	// @param address "0.0.0.0:8080"
 
-	var server *TcpServer = nil
-	listenAddr, err := net.ResolveTCPAddr("tcp", address)
+	serverObj := new(TcpListenServer)
+	base, err := newBaseListenServer(parent, address)
 	if err != nil {
-		return server, errors.NewErr(ErrTcpListerAddrError, address, err)
+		return nil, err
 	}
-
-	tcpListener, err := net.ListenTCP("tcp", listenAddr)
-	if err != nil {
-		return server, errors.NewErr(ErrTcpListerError, err)
-	}
-	// create
-	server = new(TcpServer)
-	server.BaseService = service.NewService(parent, fmt.Sprintf("TcpServer_%s", key))
-	server.listener = tcpListener
-	server.key = key
-	server.links = make(map[uint]*network.TcpLink)
-	return server, nil
+	// CREATE
+	serverObj.baseListenServer = base
+	return serverObj, nil
+}
+func (b *TcpListenServer) NetType() string {
+	return "tcp"
 }
 
-func (s *TcpServer) createLinkObj(baseLink *net.TCPConn) {
+func (s *TcpListenServer) createLinkObj(baseLink *net.TCPConn) {
 	linkObj := network.NewLink(s.Context(), baseLink, uint(snowflake.Gen()))
 	s.addLinkObj(linkObj)
 	linkObj.Start()
 }
 
-func (s *TcpServer) addLinkObj(linkObj *network.TcpLink) {
+func (s *TcpListenServer) addLinkObj(linkObj *network.TcpLink) {
 	s.linkMu.Lock()
 	defer s.linkMu.Unlock()
 	s.links[linkObj.Key()] = linkObj
 }
 
-func (s *TcpServer) _removeLinkObj(linkObj *network.TcpLink, err error) {
+func (s *TcpListenServer) _removeLinkObj(linkObj *network.TcpLink, err error) {
 	if _, found := s.links[linkObj.Key()]; found {
 		delete(s.links, linkObj.Key())
 		fmt.Println("关闭链接 ", linkObj.Key(), err)
 		linkObj.Stop()
 	}
 }
-func (s *TcpServer) removeLinkObj(linkObj *network.TcpLink, err error) {
+func (s *TcpListenServer) removeLinkObj(linkObj *network.TcpLink, err error) {
 	s.linkMu.Lock()
 	defer s.linkMu.Unlock()
 	s._removeLinkObj(linkObj, err)
 }
 
-func (s *TcpServer) removeLinkObjById(key uint, err error) {
+func (s *TcpListenServer) removeLinkObjById(key uint, err error) {
 	s.linkMu.Lock()
 	defer s.linkMu.Unlock()
 	if linkObj, found := s.links[key]; found {
@@ -92,19 +84,19 @@ func (s *TcpServer) removeLinkObjById(key uint, err error) {
 
 // Listen interface
 
-func (s *TcpServer) Dispatch(bs []byte) {
+func (s *TcpListenServer) Dispatch(bs []byte) {
 	fmt.Println("todo 接受到的数据处理", len(bs), bs)
 }
 
-func (s *TcpServer) LinkCount() int {
+func (s *TcpListenServer) LinkCount() int {
 	return len(s.links)
 }
 
-func (s *TcpServer) RemoveLink(id uint) {
+func (s *TcpListenServer) RemoveLink(id uint) {
 	s.removeLinkObjById(id, nil)
 }
 
-func (s *TcpServer) SendData(id uint, data []byte) {
+func (s *TcpListenServer) SendData(id uint, data []byte) {
 	if len(data) == 0 {
 		return // 数据为空
 	}
@@ -121,7 +113,7 @@ func (s *TcpServer) SendData(id uint, data []byte) {
 
 // Service interface
 
-func (s *TcpServer) Start() {
+func (s *TcpListenServer) Start() {
 	go func() {
 		for {
 			select {
@@ -142,7 +134,7 @@ func (s *TcpServer) Start() {
 	}()
 }
 
-func (s *TcpServer) Close() {
+func (s *TcpListenServer) Close() {
 	s.linkMu.Lock()
 	defer s.linkMu.Unlock()
 	for _, linkObj := range s.links {
