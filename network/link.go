@@ -2,6 +2,7 @@ package network
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"time"
@@ -13,11 +14,10 @@ import (
 type Link interface {
 	io.Reader
 	io.Writer
-	ID() uint       // 唯一id标识
-	Type() string   // 链接类型
-	Start()         // 启动
-	Close()         // 关闭
-	CloseCallBack() // 关闭回调
+	ID() uint             // 唯一id标识
+	Start()               // 启动
+	Close(brokenType int) // 关闭 brokenType:关闭类型
+	CloseCallBack()       // 关闭回调
 }
 
 /* 消息包规则
@@ -27,21 +27,29 @@ type Link interface {
 // 包体节流([最大65535]byte)
 */
 
+const (
+	DisConnectTypeBroken = 0 // 默认网络断开
+)
+
 // 接受的链接基类
 type baseLink struct {
 	ctx    context.Context    // 上下文
 	cancel context.CancelFunc // 关闭方法
 
-	_fd net.Conn // 套接字
+	_fd           net.Conn     // 套接字
+	_listenServer ListenServer // 归属的监听服务(todo 专门建立管理服务，不依赖于监听服务?)
 
 	id       uint   // 链接id
 	msgCount uint64 // 接受消息数量
+
+	brokenType int // 链接断开类型(关闭时写入)
 }
 
-func newBaseLink(parent context.Context, fd net.Conn) *baseLink {
+func newBaseLink(parent context.Context, fd net.Conn, _listenServer ListenServer) *baseLink {
 	obj := new(baseLink)
 	obj.ctx, obj.cancel = context.WithCancel(parent)
 	obj._fd = fd
+	obj._listenServer = _listenServer
 	obj.id = snowflake.GenUint()
 	return obj
 }
@@ -49,11 +57,6 @@ func newBaseLink(parent context.Context, fd net.Conn) *baseLink {
 // ID 唯一标识性信息
 func (b *baseLink) ID() uint {
 	return b.id
-}
-
-// ID 唯一标识性信息
-func (b *baseLink) Type() string {
-	return "" // todo 子类重写实现
 }
 
 // Read : io.Reader realize
@@ -94,15 +97,14 @@ func (b *baseLink) Start() {
 				b.CloseCallBack()
 				return
 			default:
-				_, err := util.MergePack(b)
+				data, err := util.MergePack(b)
 				if err != nil {
 					if netErr, ok := err.(net.Error); !ok || !netErr.Timeout() {
-						b.Close()
+						b.Close(DisConnectTypeBroken)
 					}
 				} else {
 					b.msgCount += 1
-					// todo 获取的数据派发
-					// l.tcpServer.Dispatch(bs)
+					b._listenServer.Dispatch(b.id, data)
 				}
 			}
 		}
@@ -110,17 +112,29 @@ func (b *baseLink) Start() {
 }
 
 // Close 关闭
-func (b *baseLink) Close() {
+func (b *baseLink) Close(brokenType int) {
+	b.brokenType = brokenType
 	b.cancel()
+
 }
 
 // CloseCallBack 关闭回调
 func (b *baseLink) CloseCallBack() {
-	// todo 通知管理器删除
+	b._listenServer.DelLink(b, b.brokenType)
 }
 
 /* exclusive method */
 
 func (b *baseLink) MsgCount() uint64 {
 	return b.msgCount
+}
+
+func NewLink(parent context.Context, netType string, baseLink net.Conn, listenServer ListenServer) Link {
+	base := newBaseLink(parent, baseLink, listenServer)
+	switch netType {
+	case "tcp":
+		return NewTcpLink(base)
+	default:
+		panic(fmt.Sprintf("unknown net type :%s", netType))
+	}
 }

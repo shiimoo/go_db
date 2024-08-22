@@ -4,18 +4,27 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 
 	"github.com/shiimoo/godb/lib/base/errors"
 	"github.com/shiimoo/godb/lib/base/snowflake"
+	"github.com/shiimoo/godb/lib/mlog"
 )
 
-type Listen interface {
-	NetType() string               // 网络类型
-	Dispatch(bs []byte)            // 数据派发
-	LinkCount() int                // 当前拥有的链接数量
-	RemoveLink(id uint)            // 移除链接
-	SendData(id uint, data []byte) // 发送数据
+type ListenServer interface {
+	Ctx() context.Context                   // 获取ctx
+	GetListen() net.Listener                // 获取底层监听器
+	NetType() string                        // 获取网络类型(tcp等)
+	AddLink(linkObj Link)                   // 添加链接
+	GetLink(id uint) Link                   // 获取链接
+	DelLink(linkObj Link, brokenType int)   // 删除链接
+	CloseLink(linkObj Link, brokenType int) // 关闭链接:先关闭后删除
+	CloseLinkByID(id uint, brokenType int)  // 关闭链接(id索引)：先关闭后删除
+	Dispatch(id uint, bs []byte)            // 数据派发
+	LinkCount() int                         // 当前拥有的链接数量
+	SendData(id uint, data []byte)          // 发送数据
+	CloseCallBack()                         // 关闭回调
 }
 
 // 网络监听服务基类
@@ -23,38 +32,51 @@ type baseListenServer struct {
 	ctx    context.Context    // 上下文
 	cancel context.CancelFunc // 关闭方法
 
+	netType string       // 网络类型
 	id      uint         // 服务id
+	address string       // 监听地址
 	_listen net.Listener // 监听器
 
 	mu    sync.RWMutex  // links锁
 	links map[uint]Link // 链接池
 }
 
-func newBaseListenServer(parent context.Context, address string) (*baseListenServer, error) {
+func newBaseListenServer(parent context.Context, netType, address string) (*baseListenServer, error) {
 	// @param address "0.0.0.0:8080"
 
-	serverObj := new(baseListenServer)
-	netType := serverObj.NetType()
 	listener, err := net.Listen(netType, address)
 	if err != nil {
-		return nil, errors.NewErr(ErrCreateListenError, netType, err)
+		return nil, errors.NewErr(ErrCreateListenError, netType, address, err)
 	}
+
+	serverObj := new(baseListenServer)
+
 	// CREATE
 	serverObj.ctx, serverObj.cancel = context.WithCancel(parent)
-	serverObj._listen = listener
+	serverObj.netType = strings.TrimSpace(netType)
 	serverObj.id = snowflake.GenUint()
+	serverObj.address = address
+	serverObj._listen = listener
 	serverObj.links = make(map[uint]Link)
 	return serverObj, nil
 }
 
+func (b *baseListenServer) Ctx() context.Context {
+	return b.ctx
+}
+func (b *baseListenServer) GetListen() net.Listener {
+	return b._listen
+}
+
 func (b *baseListenServer) NetType() string {
-	return "" // todo 子类重写实现
+	return b.netType
 }
 
 func (b *baseListenServer) AddLink(linkObj Link) {
 	b.mu.Lock()
 	b.links[linkObj.ID()] = linkObj
 	b.mu.Unlock()
+	fmt.Println("添加链接", linkObj.ID(), b.LinkCount())
 }
 
 func (b *baseListenServer) GetLink(id uint) Link {
@@ -67,29 +89,32 @@ func (b *baseListenServer) GetLink(id uint) Link {
 	return nil
 }
 
-func (b *baseListenServer) DelLink(linkObj Link) {
+func (b *baseListenServer) DelLink(linkObj Link, brokenType int) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	b.delLink(linkObj)
+	fmt.Println(errors.NewErr(ErrLinkDisconnect, b.NetType(), brokenType))
+}
+
+func (b *baseListenServer) delLink(linkObj Link) {
 	_, found := b.links[linkObj.ID()]
 	if !found {
 		return
 	}
 	delete(b.links, linkObj.ID())
+	fmt.Println("链接关闭", linkObj.ID(), b.LinkCount())
 }
 
-func (b *baseListenServer) CloseLink(linkObj Link) {
-	// todo 关闭原因
-	linkObj.Close()
-	b.DelLink(linkObj)
+func (b *baseListenServer) CloseLink(linkObj Link, brokenType int) {
+	linkObj.Close(brokenType)
 }
 
-func (b *baseListenServer) CloseLinkByID(id uint) {
+func (b *baseListenServer) CloseLinkByID(id uint, brokenType int) {
 	linkObj := b.GetLink(id)
 	if linkObj == nil {
 		return
 	}
-	linkObj.Close()
-	b.DelLink(linkObj)
+	linkObj.Close(brokenType)
 }
 
 func (b *baseListenServer) LinkCount() int {
@@ -105,11 +130,48 @@ func (b *baseListenServer) SendData(id uint, data []byte) {
 		return // 链接不存在
 	}
 	if _, err := linkObj.Write(data); err != nil {
-		b.CloseLink(linkObj)
+		b.CloseLink(linkObj, DisConnectTypeBroken)
 	}
 }
 
 // Dispatch 数据派发: 链接获取到的数据进行派发
 func (b *baseListenServer) Dispatch(id uint, bs []byte) {
 	fmt.Println("todo 接受到的数据处理", id, len(bs), bs)
+}
+
+func (b *baseListenServer) CloseCallBack() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for _, linkObj := range b.links {
+		b.delLink(linkObj)
+	}
+}
+
+// todo service interface
+
+func (b *baseListenServer) Start() {
+	// startListen(b)
+	panic("please Call [startListen] in a subclass method[Start]")
+}
+
+func startListen(ls ListenServer) {
+	go func() {
+		for {
+			select {
+			case <-ls.Ctx().Done():
+				ls.CloseCallBack()
+				return
+			default:
+				// 监听链接
+				fd, err := ls.GetListen().Accept()
+				if err != nil {
+					mlog.Warn("tcp", "acceptTCP", err.Error())
+				} else {
+					linkObj := NewLink(ls.Ctx(), ls.NetType(), fd, ls)
+					ls.AddLink(linkObj)
+					linkObj.Start()
+				}
+			}
+		}
+	}()
 }

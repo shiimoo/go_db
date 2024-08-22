@@ -3,6 +3,7 @@ package mlog
 import (
 	"context"
 	"log"
+	"os"
 )
 
 // ***** 日志记录器 *****
@@ -90,8 +91,14 @@ func (l *logger) _start() {
 }
 
 func (l *logger) _output(msg *Log) error {
+	var err error
 	if l.outFunc == nil {
-		return defaultOutFunc(msg)
+		err = defaultOutFunc(msg)
+	} else {
+		err = l.outFunc(msg)
 	}
-	return l.outFunc(msg)
+	if msg.lv == LvFatal {
+		os.Exit(1)
+	}
+	return err
 }

@@ -4,19 +4,20 @@ import (
 	"context"
 
 	"github.com/shiimoo/godb/lib/mlog"
-	"github.com/shiimoo/godb/network/tcp"
+	"github.com/shiimoo/godb/network"
 )
 
 func main() {
-	closeChan := make(chan any, 1)
+	// closeChan := make(chan any, 1)
 
 	rootCtx := context.Background()
 
-	server, err := tcp.NewServer(rootCtx, "test", ":8080")
+	server, err := network.NewTcpListenServer(rootCtx, ":8080")
 	if err != nil {
 		mlog.Fatal("game", "start", err.Error())
 	}
 	server.Start()
 
-	<-closeChan
+	for {
+	}
 }
