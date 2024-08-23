@@ -12,4 +12,7 @@ var (
 
 	/* 断开链接 */
 	ErrLinkDisconnect = errors.TempErr("broken link: netType:%s brokenType:%d")
+
+	/* webSocket */
+	ErrWsRouting = errors.TempErr("web socket route[%v] err: %s")
 )

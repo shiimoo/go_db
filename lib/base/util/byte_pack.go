@@ -82,3 +82,12 @@ func MergePack(r io.Reader) ([]byte, error) {
 	}
 	return msgBuf, nil // 接受完毕
 }
+
+func MsgBytesLimit() int {
+	return packBytesLimit
+}
+
+func PackBytesLimit() int {
+	// 包体总数 + 当前包序号 + 该包字节数 + packBytesLimit
+	return 2 + 2 + 2 + packBytesLimit
+}

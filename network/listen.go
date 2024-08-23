@@ -9,13 +9,15 @@ import (
 
 	"github.com/shiimoo/godb/lib/base/errors"
 	"github.com/shiimoo/godb/lib/base/snowflake"
-	"github.com/shiimoo/godb/lib/mlog"
 )
 
 type ListenServer interface {
-	Ctx() context.Context                   // 获取ctx
-	GetListen() net.Listener                // 获取底层监听器
-	NetType() string                        // 获取网络类型(tcp等)
+	Ctx() context.Context    // 获取ctx
+	GetListen() net.Listener // 获取底层监听器
+	NetType() string         // 获取网络类型(tcp等)
+	CloseCallBack()          // 关闭回调
+
+	/* 管理 */
 	AddLink(linkObj Link)                   // 添加链接
 	GetLink(id uint) Link                   // 获取链接
 	DelLink(linkObj Link, brokenType int)   // 删除链接
@@ -24,7 +26,10 @@ type ListenServer interface {
 	Dispatch(id uint, bs []byte)            // 数据派发
 	LinkCount() int                         // 当前拥有的链接数量
 	SendData(id uint, data []byte)          // 发送数据
-	CloseCallBack()                         // 关闭回调
+
+	/* 服务 */
+	Start()
+	Close()
 }
 
 // 网络监听服务基类
@@ -71,6 +76,8 @@ func (b *baseListenServer) GetListen() net.Listener {
 func (b *baseListenServer) NetType() string {
 	return b.netType
 }
+
+/* 链接管理 */
 
 func (b *baseListenServer) AddLink(linkObj Link) {
 	b.mu.Lock()
@@ -147,31 +154,12 @@ func (b *baseListenServer) CloseCallBack() {
 	}
 }
 
-// todo service interface
+/* todo service interface */
 
 func (b *baseListenServer) Start() {
-	// startListen(b)
-	panic("please Call [startListen] in a subclass method[Start]")
+	panic("please rewrite in a subclass method[Start]")
 }
 
-func startListen(ls ListenServer) {
-	go func() {
-		for {
-			select {
-			case <-ls.Ctx().Done():
-				ls.CloseCallBack()
-				return
-			default:
-				// 监听链接
-				fd, err := ls.GetListen().Accept()
-				if err != nil {
-					mlog.Warn("tcp", "acceptTCP", err.Error())
-				} else {
-					linkObj := NewLink(ls.Ctx(), ls.NetType(), fd, ls)
-					ls.AddLink(linkObj)
-					linkObj.Start()
-				}
-			}
-		}
-	}()
+func (b *baseListenServer) Close() {
+	b.cancel()
 }

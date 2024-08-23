@@ -2,7 +2,6 @@ package network
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net"
 	"time"
@@ -127,14 +126,4 @@ func (b *baseLink) CloseCallBack() {
 
 func (b *baseLink) MsgCount() uint64 {
 	return b.msgCount
-}
-
-func NewLink(parent context.Context, netType string, baseLink net.Conn, listenServer ListenServer) Link {
-	base := newBaseLink(parent, baseLink, listenServer)
-	switch netType {
-	case "tcp":
-		return NewTcpLink(base)
-	default:
-		panic(fmt.Sprintf("unknown net type :%s", netType))
-	}
 }

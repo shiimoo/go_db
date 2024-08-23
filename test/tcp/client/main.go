@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/shiimoo/godb/lib/base/util"
+	"github.com/shiimoo/godb/network"
 )
 
 func main() {
@@ -16,7 +17,7 @@ func main() {
 		1, 2, 3, 4, 5, 6, 7, 8,
 		1, 2, 3, 4, 5, 6, 7, 8,
 	}
-	linkObj, err := net.Dial("tcp", "127.0.0.1:8080")
+	linkObj, err := net.Dial(network.NetTypeTcp, "127.0.0.1:8080")
 	if err != nil {
 		log.Fatal(err)
 	}

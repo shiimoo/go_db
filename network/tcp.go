@@ -2,6 +2,8 @@ package network
 
 import (
 	"context"
+
+	"github.com/shiimoo/godb/lib/mlog"
 )
 
 type TcpLink struct {
@@ -19,9 +21,9 @@ type TcpListenServer struct {
 	*baseListenServer
 }
 
-func NewTcpListenServer(parent context.Context, address string) (*TcpListenServer, error) {
+func NewTcpListenServer(parent context.Context, address string, _ ...any) (*TcpListenServer, error) {
 	serverObj := new(TcpListenServer)
-	base, err := newBaseListenServer(parent, "tcp", address)
+	base, err := newBaseListenServer(parent, NetTypeTcp, address)
 	if err != nil {
 		return nil, err
 	}
@@ -31,5 +33,23 @@ func NewTcpListenServer(parent context.Context, address string) (*TcpListenServe
 }
 
 func (t *TcpListenServer) Start() {
-	startListen(t)
+	go func() {
+		for {
+			select {
+			case <-t.Ctx().Done():
+				t.CloseCallBack()
+				return
+			default:
+				// 监听链接
+				fd, err := t.GetListen().Accept()
+				if err != nil {
+					mlog.Warn(NetTypeTcp, "acceptTCP", err.Error())
+				} else {
+					linkObj := NewLink(t.Ctx(), t.NetType(), fd, t)
+					t.AddLink(linkObj)
+					linkObj.Start()
+				}
+			}
+		}
+	}()
 }
