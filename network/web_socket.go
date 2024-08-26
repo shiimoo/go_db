@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/shiimoo/godb/lib/base/errors"
@@ -45,67 +47,76 @@ func (wl *WebSocketLink) ID() uint {
 
 // Read : io.Reader realize
 func (wl *WebSocketLink) Read(p []byte) (int, error) {
-	// err := b._fd.SetDeadline(time.Now().Add(1 * time.Millisecond))
-	// if err != nil {
-	// 	return 0, err
-	// }
-	// return b._fd.Read(p)
-	return 0, nil
+	if err := wl.baseLink.SetReadDeadline(time.Now().Add(1 * time.Millisecond)); err != nil {
+		return 0, err
+	}
+
+	msgType, bs, err := wl.baseLink.ReadMessage()
+	if err != nil {
+		return 0, err
+	}
+	copy(p, bs)
+	if len(p) >= len(bs) {
+		p = p[:len(bs)] // 截断
+	} else {
+		p = append(p, bs[len(p):]...) // 拓展
+	}
+	return msgType, nil
 }
 
 // Write : io.Writer realize
 func (wl *WebSocketLink) Write(data []byte) (int, error) {
-	// packs := util.SubPack(data)
-	// max := uint(len(packs))
-	// count := 0
-	// for index, pack := range packs {
-	// 	msg := make([]byte, 0)
-	// 	msg = append(msg, util.UintToBytes(max, 16)...)
-	// 	msg = append(msg, util.UintToBytes(uint(index+1), 16)...)
-	// 	msg = append(msg, util.UintToBytes(uint(len(pack)), 16)...)
-	// 	msg = append(msg, pack...)
-	// 	if n, err := b._fd.Write(msg); err != nil {
-	// 		return count, err
-	// 	} else {
-	// 		count += n
-	// 	}
-	// }
-	// return len(data), nil
-	return 0, nil
+	packs := util.SubPack(data)
+	max := uint(len(packs))
+	for index, pack := range packs {
+		msg := make([]byte, 0)
+		msg = append(msg, util.UintToBytes(max, 16)...)
+		msg = append(msg, util.UintToBytes(uint(index+1), 16)...)
+		msg = append(msg, util.UintToBytes(uint(len(pack)), 16)...)
+		msg = append(msg, pack...)
+		if err := wl.baseLink.WriteMessage(websocket.BinaryMessage, msg); err != nil {
+			return 0, err
+		}
+	}
+	return len(data), nil
 }
 
 func (wl *WebSocketLink) Start() {
-
-	// go func() {
-	// 	for {
-	// 		select {
-	// 		case <-b.ctx.Done():
-	// 			b.CloseCallBack()
-	// 			return
-	// 		default:
-	// 			data, err := util.MergePack(b)
-	// 			if err != nil {
-	// 				if netErr, ok := err.(net.Error); !ok || !netErr.Timeout() {
-	// 					b.Close(DisConnectTypeBroken)
-	// 				}
-	// 			} else {
-	// 				b.msgCount += 1
-	// 				b._listenServer.Dispatch(b.id, data)
-	// 			}
-	// 		}
-	// 	}
-	// }()
+	go func() {
+		for {
+			select {
+			case <-wl.ctx.Done():
+				wl.CloseCallBack()
+				return
+			default:
+				data, err := util.MergePack(wl)
+				if err != nil {
+					if netErr, ok := err.(net.Error); !ok || !netErr.Timeout() {
+						wl.Close(DisConnectTypeBroken)
+					}
+				} else {
+					wl.msgCount += 1
+					wl._listenServer.Dispatch(wl.id, data)
+				}
+			}
+		}
+	}()
 }
 
 // Close 关闭
 func (wl *WebSocketLink) Close(brokenType int) {
-	// b.brokenType = brokenType
-	// b.cancel()
+	wl.brokenType = brokenType
+	wl.cancel()
 }
 
 // CloseCallBack 关闭回调
 func (wl *WebSocketLink) CloseCallBack() {
-	// b._listenServer.DelLink(b, b.brokenType)
+	wl._listenServer.DelLink(wl, wl.brokenType)
+	wl.baseLink.Close()
+}
+
+func (wl *WebSocketLink) MsgCount() uint64 {
+	return wl.msgCount
 }
 
 // WebSocketListenServer webSocket服务
@@ -167,4 +178,5 @@ func (w *WebSocketListenServer) serveWs(resp http.ResponseWriter, req *http.Requ
 	linkObj := NewWebSocketLink(w.Ctx(), conn, w)
 	w.AddLink(linkObj)
 	linkObj.Start()
+	log.Printf("linkObj.Start() %d", linkObj.ID())
 }

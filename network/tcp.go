@@ -2,6 +2,7 @@ package network
 
 import (
 	"context"
+	"net"
 
 	"github.com/shiimoo/godb/lib/mlog"
 )
@@ -10,9 +11,9 @@ type TcpLink struct {
 	*baseLink
 }
 
-func NewTcpLink(base *baseLink) *TcpLink {
+func NewTcpLink(parent context.Context, netType string, baseLink net.Conn, listenServer ListenServer) *TcpLink {
 	link := new(TcpLink)
-	link.baseLink = base
+	link.baseLink = newBaseLink(parent, baseLink, listenServer)
 	return link
 }
 
@@ -45,7 +46,7 @@ func (t *TcpListenServer) Start() {
 				if err != nil {
 					mlog.Warn(NetTypeTcp, "acceptTCP", err.Error())
 				} else {
-					linkObj := NewLink(t.Ctx(), t.NetType(), fd, t)
+					linkObj := NewTcpLink(t.Ctx(), t.NetType(), fd, t)
 					t.AddLink(linkObj)
 					linkObj.Start()
 				}

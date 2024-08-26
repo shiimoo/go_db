@@ -49,19 +49,20 @@ type baseListenServer struct {
 func newBaseListenServer(parent context.Context, netType, address string) (*baseListenServer, error) {
 	// @param address "0.0.0.0:8080"
 
-	listener, err := net.Listen(netType, address)
-	if err != nil {
-		return nil, errors.NewErr(ErrCreateListenError, netType, address, err)
-	}
-
 	serverObj := new(baseListenServer)
+	if netType != NetTypeWebSocket {
+		listener, err := net.Listen(netType, address)
+		if err != nil {
+			return nil, errors.NewErr(ErrCreateListenError, netType, address, err)
+		}
+		serverObj._listen = listener
+	}
 
 	// CREATE
 	serverObj.ctx, serverObj.cancel = context.WithCancel(parent)
 	serverObj.netType = strings.TrimSpace(netType)
 	serverObj.id = snowflake.GenUint()
 	serverObj.address = address
-	serverObj._listen = listener
 	serverObj.links = make(map[uint]Link)
 	return serverObj, nil
 }

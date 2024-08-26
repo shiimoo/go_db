@@ -120,6 +120,7 @@ func (b *baseLink) Close(brokenType int) {
 // CloseCallBack 关闭回调
 func (b *baseLink) CloseCallBack() {
 	b._listenServer.DelLink(b, b.brokenType)
+	b._fd.Close()
 }
 
 /* exclusive method */

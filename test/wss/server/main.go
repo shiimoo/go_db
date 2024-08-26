@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/websocket"
+	"github.com/shiimoo/godb/lib/mlog"
+	"github.com/shiimoo/godb/network"
 )
 
 var upgrader = websocket.Upgrader{
@@ -43,10 +46,22 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/ws", serveWs)
-	log.Println("Starting WebSocket server on :8080...")
-	err := http.ListenAndServe(":8080", nil)
+
+	rootCtx := context.Background()
+
+	server, err := network.NewListen(rootCtx, network.NetTypeWebSocket, ":8080", "ws")
 	if err != nil {
-		log.Fatal("Error starting server:", err)
+		mlog.Fatal("game", "start", err.Error())
 	}
+	log.Println(server)
+	server.Start()
+
+	for {
+	}
+	// http.HandleFunc("/ws", serveWs)
+	// log.Println("Starting WebSocket server on :8080...")
+	// err := http.ListenAndServe(":8080", nil)
+	// if err != nil {
+	// 	log.Fatal("Error starting server:", err)
+	// }
 }
