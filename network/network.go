@@ -16,8 +16,8 @@ func NewLink(parent context.Context, netType string, baseLink net.Conn, listenSe
 	switch netType {
 	case NetTypeTcp:
 		return NewTcpLink(base)
-	case NetTypeWebSocket:
-		return NewWebSocketLink(base)
+	// case NetTypeWebSocket:
+	// 	return NewWebSocketLink(base)
 	default:
 		panic(fmt.Sprintf("unknown net type :%s", netType))
 	}
