@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strings"
 
@@ -14,7 +15,7 @@ import (
 	"github.com/shiimoo/godb/lib/base/util"
 )
 
-/* WebSocket */
+/* Link */
 
 type WebSocketLink struct {
 	ctx    context.Context    // 上下文
@@ -22,7 +23,6 @@ type WebSocketLink struct {
 
 	_fd           *websocket.Conn // websocket 升级conn
 	_listenServer ListenServer    // 归属的监听服务(todo 专门建立管理服务，不依赖于监听服务?)
-	byteCache     []byte          // 已接受的字节缓存
 
 	id       uint   // 链接id
 	msgCount uint64 // 接受消息数量
@@ -42,6 +42,11 @@ func NewWebSocketLink(parent context.Context, fd *websocket.Conn, listenServer L
 // ID 唯一标识性信息
 func (wl *WebSocketLink) ID() uint {
 	return wl.id
+}
+
+// NetType 获取网络类型
+func (wl *WebSocketLink) NetType() string {
+	return NetTypeWebSocket
 }
 
 // ReadPack 读取数据包
@@ -134,6 +139,8 @@ func (wl *WebSocketLink) MsgCount() uint64 {
 	return wl.msgCount
 }
 
+/* ListenServer */
+
 // WebSocketListenServer webSocket服务
 type WebSocketListenServer struct {
 	*baseListenServer
@@ -156,7 +163,7 @@ func NewWebSocketListenServer(parent context.Context, address string, parmas ...
 				fmt.Sprintf("route Type must be string, but it's %s", reflect.TypeOf(parmas[0])),
 			)
 		}
-		routing = strings.TrimSpace(routing)
+		routing = strings.TrimSpace(strings.Trim(routing, "/"))
 		if routing != "" {
 			serverObj.routing = "/" + routing
 		}
@@ -195,4 +202,121 @@ func (w *WebSocketListenServer) serveWs(resp http.ResponseWriter, req *http.Requ
 	linkObj := NewWebSocketLink(w.Ctx(), conn, w)
 	w.AddLink(linkObj)
 	linkObj.Start()
+}
+
+/* LinkClient */
+
+type WebSocketClient struct {
+	ctx    context.Context    // 上下文
+	cancel context.CancelFunc // 关闭方法
+
+	_fd *websocket.Conn
+}
+
+func NewWebScoketClient(parent context.Context, host, routing string) (*WebSocketClient, error) {
+	routing = strings.TrimSpace(strings.Trim(routing, "/"))
+	if routing != "" {
+		routing = "/" + routing
+	}
+	wsUrl := url.URL{Scheme: "ws", Host: host, Path: routing}
+	fd, _, err := websocket.DefaultDialer.Dial(wsUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	client := new(WebSocketClient)
+	client.ctx, client.cancel = context.WithCancel(parent)
+	client._fd = fd
+	return client, nil
+}
+
+func (wc *WebSocketClient) NetType() string {
+	return NetTypeWebSocket
+}
+
+func (wc *WebSocketClient) Start() {
+	go func() {
+		for {
+			select {
+			case <-wc.ctx.Done():
+				wc.CloseCallBack()
+				return
+			default:
+				data, err := wc.ReadPack()
+				if err != nil {
+					wc.Close(DisConnectTypeBroken)
+				} else {
+					wc.Dispatch(data)
+				}
+			}
+		}
+	}()
+}
+
+// Close 关闭
+func (wc *WebSocketClient) Close(brokenType int) {
+	wc.cancel()
+}
+
+// CloseCallBack 关闭回调
+func (wc *WebSocketClient) CloseCallBack() {
+	wc._fd.Close()
+}
+
+// ReadPack 读取数据包
+func (wc *WebSocketClient) ReadPack() ([]byte, error) {
+	msgType, bs, err := wc._fd.ReadMessage()
+	if err != nil {
+		return nil, err
+	}
+	if msgType != websocket.BinaryMessage {
+		return nil, nil
+	}
+
+	// 包体总数(uin16 [2]byte)
+	packNum := util.BytesToUint(bs[:2])
+	// 当前包体序号([2]byte)
+	packIndex := util.BytesToUint(bs[2:4])
+	if packIndex > packNum {
+		return nil, errors.NewErr(util.ErrPackNumError, packNum, packIndex)
+	}
+
+	// 包体字节总长度([2]byte)
+	packSize := util.BytesToUint(bs[4:6])
+
+	// 包体字节流(最大[65535]byte)
+	msgBuf := bs[6:]
+	if uint(len(msgBuf)) != packSize {
+		return nil, errors.NewErr(util.ErrPackSizeError, packSize, len(msgBuf))
+	}
+
+	if packNum != packIndex {
+		buf, err := wc.ReadPack()
+		if err != nil {
+			return nil, err
+		}
+		msgBuf = append(msgBuf, buf...)
+	}
+	return msgBuf, nil // 接受完毕
+}
+
+func (wc *WebSocketClient) Dispatch(data []byte) {
+	fmt.Println("WebSocketClient 接受数据处理", data)
+}
+
+// Write : io.Writer realize
+func (wc *WebSocketClient) Write(data []byte) (int, error) {
+	packs := util.SubPack(data)
+	max := uint(len(packs))
+	for index, pack := range packs {
+		msg := make([]byte, 0)
+		msg = append(msg, util.UintToBytes(max, 16)...)
+		msg = append(msg, util.UintToBytes(uint(index+1), 16)...)
+		msg = append(msg, util.UintToBytes(uint(len(pack)), 16)...)
+		msg = append(msg, pack...)
+		if err := wc._fd.WriteMessage(websocket.BinaryMessage, msg); err != nil {
+			return 0, err
+		}
+	}
+	return len(data), nil
 }

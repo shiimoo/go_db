@@ -5,7 +5,8 @@ import (
 )
 
 type Link interface {
-	io.Writer                  // 数据写入
+	io.Writer // 数据写入
+	NetType() string
 	ReadPack() ([]byte, error) // 读取数据包
 	ID() uint                  // 唯一id标识
 	Start()                    // 启动
@@ -24,5 +25,7 @@ const (
 	DisConnectTypeBroken = 0 // 默认网络断开
 )
 
+// 链接客户端
 type linkClient interface {
+	NetType() string // return NetTypeXxx
 }

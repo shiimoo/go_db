@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 )
 
 func main() {
@@ -32,7 +33,8 @@ func main() {
 	// 	fmt.Println(222, original[len(copied):])
 	// 	copied = append(copied, original[len(copied):]...)
 	// }
-	fmt.Println(copied) // 输出: [1 2 3 4 5]
+	fmt.Println(copied)                       // 输出: [1 2 3 4 5]
+	fmt.Println(strings.Trim("/a///b/", "/")) // 输出: [1 2 3 4 5]
 }
 
 func tyq(length int) {

@@ -2,6 +2,7 @@ package network
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"time"
 
@@ -10,6 +11,8 @@ import (
 	"github.com/shiimoo/godb/lib/base/util"
 	"github.com/shiimoo/godb/lib/mlog"
 )
+
+/* Link */
 
 type TcpLink struct {
 	ctx    context.Context    // 上下文
@@ -30,6 +33,11 @@ func NewTcpLink(parent context.Context, netType string, fd net.Conn, listenServe
 	link._listenServer = listenServer
 	link.id = snowflake.GenUint()
 	return link
+}
+
+// NetType 获取网络类型
+func (tl *TcpLink) NetType() string {
+	return NetTypeTcp
 }
 
 // ID 唯一标识性信息
@@ -141,7 +149,6 @@ func (tl *TcpLink) Start() {
 func (tl *TcpLink) Close(brokenType int) {
 	tl.brokenType = brokenType
 	tl.cancel()
-
 }
 
 // CloseCallBack 关闭回调
@@ -155,6 +162,8 @@ func (tl *TcpLink) CloseCallBack() {
 func (tl *TcpLink) MsgCount() uint64 {
 	return tl.msgCount
 }
+
+/* ListenServer */
 
 // TcpListenServer tcp服务
 type TcpListenServer struct {
@@ -192,4 +201,142 @@ func (t *TcpListenServer) Start() {
 			}
 		}
 	}()
+}
+
+/* LinkClient */
+
+type TcpClient struct {
+	ctx    context.Context    // 上下文
+	cancel context.CancelFunc // 关闭方法
+
+	_fd net.Conn // 套接字
+}
+
+func NewTcpClient(parent context.Context, host string) (*TcpClient, error) {
+	fd, err := net.Dial(NetTypeTcp, host)
+	if err != nil {
+		return nil, err
+	}
+
+	client := new(TcpClient)
+	client.ctx, client.cancel = context.WithCancel(parent)
+	client._fd = fd
+	return client, nil
+}
+
+func (tc *TcpClient) NetType() string {
+	return NetTypeTcp
+}
+
+// Start 启动
+func (tc *TcpClient) Start() {
+	go func() {
+		for {
+			select {
+			case <-tc.ctx.Done():
+				tc.CloseCallBack()
+				return
+			default:
+				data, err := tc.ReadPack()
+				if err != nil {
+					if netErr, ok := err.(net.Error); !ok || !netErr.Timeout() {
+						tc.Close(DisConnectTypeBroken)
+					}
+				} else {
+					tc.Dispatch(data)
+				}
+			}
+		}
+	}()
+}
+
+// Close 关闭
+func (tc *TcpClient) Close(brokenType int) {
+	tc.cancel()
+}
+
+// CloseCallBack 关闭回调
+func (tc *TcpClient) CloseCallBack() {
+	tc._fd.Close()
+}
+
+// ReadPack 读取数据包
+func (tc *TcpClient) ReadPack() ([]byte, error) {
+	// 包体总数(uin16 [2]byte)
+	packNumBuf := make([]byte, 2)
+	_, err := tc.Read(packNumBuf)
+	if err != nil {
+		return nil, err
+	}
+	packNum := util.BytesToUint(packNumBuf)
+	// 当前包体序号([2]byte)
+	packIndexBuf := make([]byte, 2)
+	_, err = tc.Read(packIndexBuf)
+	if err != nil {
+		return nil, err
+	}
+	packIndex := util.BytesToUint(packIndexBuf)
+	if packIndex > packNum {
+		return nil, errors.NewErr(util.ErrPackNumError, packNum, packIndex)
+	}
+
+	// 包体字节总长度([2]byte)
+	packSizeBuf := make([]byte, 2)
+	_, err = tc.Read(packSizeBuf)
+	if err != nil {
+		return nil, err
+	}
+	packSize := util.BytesToUint(packSizeBuf)
+
+	// 包体字节流(最大[65535]byte)
+	msgBuf := make([]byte, packSize)
+	n, err := tc.Read(msgBuf)
+	if err != nil {
+		return nil, err
+	}
+	if uint(n) != packSize {
+		return nil, errors.NewErr(util.ErrPackSizeError, packSize, n)
+	}
+
+	if packNum != packIndex {
+		buf, err := tc.ReadPack()
+		if err != nil {
+			return nil, err
+		}
+		msgBuf = append(msgBuf, buf...)
+	}
+	return msgBuf, nil // 接受完毕
+}
+
+// Read : io.Reader realize
+func (tc *TcpClient) Read(p []byte) (int, error) {
+	err := tc._fd.SetDeadline(time.Now().Add(1 * time.Millisecond))
+	if err != nil {
+		return 0, err
+	}
+	return tc._fd.Read(p)
+}
+
+func (tc *TcpClient) Dispatch(data []byte) {
+	fmt.Println("TcpClient 接受数据处理", data)
+}
+
+// Write : io.Writer realize
+func (tc *TcpClient) Write(data []byte) (int, error) {
+	packs := util.SubPack(data)
+	max := uint(len(packs))
+	count := 0
+	for index, pack := range packs {
+		msg := make([]byte, 0)
+		msg = append(msg, util.UintToBytes(max, 16)...)
+		msg = append(msg, util.UintToBytes(uint(index+1), 16)...)
+		msg = append(msg, util.UintToBytes(uint(len(pack)), 16)...)
+		msg = append(msg, pack...)
+		if n, err := tc._fd.Write(msg); err != nil {
+			return count, err
+		} else {
+			count += n
+		}
+	}
+	return len(data), nil
 }

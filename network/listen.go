@@ -145,6 +145,7 @@ func (b *baseListenServer) SendData(id uint, data []byte) {
 // Dispatch 数据派发: 链接获取到的数据进行派发
 func (b *baseListenServer) Dispatch(id uint, bs []byte) {
 	fmt.Println("todo 接受到的数据处理", id, len(bs), bs)
+	b.SendData(id, bs)
 }
 
 func (b *baseListenServer) CloseCallBack() {
