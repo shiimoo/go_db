@@ -8,6 +8,8 @@ import (
 const (
 	NetTypeTcp       = "tcp"
 	NetTypeWebSocket = "webSocket"
+	// todo udp
+	// todo kcp
 )
 
 func NewListen(parent context.Context, netType string, address string, parmas ...any) (ListenServer, error) {
