@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/shiimoo/godb/lib/base/errors"
@@ -22,8 +20,9 @@ type WebSocketLink struct {
 	ctx    context.Context    // 上下文
 	cancel context.CancelFunc // 关闭方法
 
-	baseLink      *websocket.Conn
-	_listenServer ListenServer // 归属的监听服务(todo 专门建立管理服务，不依赖于监听服务?)
+	_fd           *websocket.Conn // websocket 升级conn
+	_listenServer ListenServer    // 归属的监听服务(todo 专门建立管理服务，不依赖于监听服务?)
+	byteCache     []byte          // 已接受的字节缓存
 
 	id       uint   // 链接id
 	msgCount uint64 // 接受消息数量
@@ -31,11 +30,11 @@ type WebSocketLink struct {
 	brokenType int // 链接断开类型(关闭时写入)
 }
 
-func NewWebSocketLink(parent context.Context, base *websocket.Conn, _listenServer ListenServer) *WebSocketLink {
+func NewWebSocketLink(parent context.Context, fd *websocket.Conn, listenServer ListenServer) *WebSocketLink {
 	obj := new(WebSocketLink)
 	obj.ctx, obj.cancel = context.WithCancel(parent)
-	obj.baseLink = base
-	obj._listenServer = _listenServer
+	obj._fd = fd
+	obj._listenServer = listenServer
 	obj.id = snowflake.GenUint()
 	return obj
 }
@@ -45,23 +44,41 @@ func (wl *WebSocketLink) ID() uint {
 	return wl.id
 }
 
-// Read : io.Reader realize
-func (wl *WebSocketLink) Read(p []byte) (int, error) {
-	if err := wl.baseLink.SetReadDeadline(time.Now().Add(1 * time.Millisecond)); err != nil {
-		return 0, err
+// ReadPack 读取数据包
+func (wl *WebSocketLink) ReadPack() ([]byte, error) {
+	msgType, bs, err := wl._fd.ReadMessage()
+	if err != nil {
+		return nil, err
+	}
+	if msgType != websocket.BinaryMessage {
+		return nil, nil
 	}
 
-	msgType, bs, err := wl.baseLink.ReadMessage()
-	if err != nil {
-		return 0, err
+	// 包体总数(uin16 [2]byte)
+	packNum := util.BytesToUint(bs[:2])
+	// 当前包体序号([2]byte)
+	packIndex := util.BytesToUint(bs[2:4])
+	if packIndex > packNum {
+		return nil, errors.NewErr(util.ErrPackNumError, packNum, packIndex)
 	}
-	copy(p, bs)
-	if len(p) >= len(bs) {
-		p = p[:len(bs)] // 截断
-	} else {
-		p = append(p, bs[len(p):]...) // 拓展
+
+	// 包体字节总长度([2]byte)
+	packSize := util.BytesToUint(bs[4:6])
+
+	// 包体字节流(最大[65535]byte)
+	msgBuf := bs[6:]
+	if uint(len(msgBuf)) != packSize {
+		return nil, errors.NewErr(util.ErrPackSizeError, packSize, len(msgBuf))
 	}
-	return msgType, nil
+
+	if packNum != packIndex {
+		buf, err := wl.ReadPack()
+		if err != nil {
+			return nil, err
+		}
+		msgBuf = append(msgBuf, buf...)
+	}
+	return msgBuf, nil // 接受完毕
 }
 
 // Write : io.Writer realize
@@ -74,7 +91,7 @@ func (wl *WebSocketLink) Write(data []byte) (int, error) {
 		msg = append(msg, util.UintToBytes(uint(index+1), 16)...)
 		msg = append(msg, util.UintToBytes(uint(len(pack)), 16)...)
 		msg = append(msg, pack...)
-		if err := wl.baseLink.WriteMessage(websocket.BinaryMessage, msg); err != nil {
+		if err := wl._fd.WriteMessage(websocket.BinaryMessage, msg); err != nil {
 			return 0, err
 		}
 	}
@@ -89,11 +106,9 @@ func (wl *WebSocketLink) Start() {
 				wl.CloseCallBack()
 				return
 			default:
-				data, err := util.MergePack(wl)
+				data, err := wl.ReadPack()
 				if err != nil {
-					if netErr, ok := err.(net.Error); !ok || !netErr.Timeout() {
-						wl.Close(DisConnectTypeBroken)
-					}
+					wl.Close(DisConnectTypeBroken)
 				} else {
 					wl.msgCount += 1
 					wl._listenServer.Dispatch(wl.id, data)
@@ -112,7 +127,7 @@ func (wl *WebSocketLink) Close(brokenType int) {
 // CloseCallBack 关闭回调
 func (wl *WebSocketLink) CloseCallBack() {
 	wl._listenServer.DelLink(wl, wl.brokenType)
-	wl.baseLink.Close()
+	wl._fd.Close()
 }
 
 func (wl *WebSocketLink) MsgCount() uint64 {
@@ -161,12 +176,14 @@ func NewWebSocketListenServer(parent context.Context, address string, parmas ...
 }
 
 func (w *WebSocketListenServer) Start() {
-	http.HandleFunc(w.routing, w.serveWs)
-	log.Printf("Starting WebSocket server on %s...\n", w.address)
-	err := http.ListenAndServe(w.address, nil)
-	if err != nil {
-		log.Fatal("Error starting server:", err)
-	}
+	go func() {
+		http.HandleFunc(w.routing, w.serveWs)
+		log.Printf("Starting WebSocket server on %s...\n", w.address)
+		err := http.ListenAndServe(w.address, nil)
+		if err != nil {
+			log.Fatal("Error starting server:", err)
+		}
+	}()
 }
 
 func (w *WebSocketListenServer) serveWs(resp http.ResponseWriter, req *http.Request) {
@@ -178,5 +195,4 @@ func (w *WebSocketListenServer) serveWs(resp http.ResponseWriter, req *http.Requ
 	linkObj := NewWebSocketLink(w.Ctx(), conn, w)
 	w.AddLink(linkObj)
 	linkObj.Start()
-	log.Printf("linkObj.Start() %d", linkObj.ID())
 }

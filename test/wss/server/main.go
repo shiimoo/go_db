@@ -53,7 +53,6 @@ func main() {
 	if err != nil {
 		mlog.Fatal("game", "start", err.Error())
 	}
-	log.Println(server)
 	server.Start()
 
 	for {

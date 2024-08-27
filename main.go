@@ -25,13 +25,13 @@ func main() {
 	original := []int{1, 2, 3, 4, 5, 6, 7}
 	copied := make([]int, 5) //len(original))
 	copy(copied, original)
-	if len(copied) >= len(original) {
-		fmt.Println(111)
-		copied = copied[:len(original)]
-	} else {
-		fmt.Println(222, original[len(copied):])
-		copied = append(copied, original[len(copied):]...)
-	}
+	// if len(copied) >= len(original) {
+	// 	fmt.Println(111)
+	// 	copied = copied[:len(original)]
+	// } else {
+	// 	fmt.Println(222, original[len(copied):])
+	// 	copied = append(copied, original[len(copied):]...)
+	// }
 	fmt.Println(copied) // 输出: [1 2 3 4 5]
 }
 
