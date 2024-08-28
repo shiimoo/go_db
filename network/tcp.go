@@ -17,7 +17,7 @@ import (
 type TcpLink struct {
 	ctx    context.Context    // 上下文
 	cancel context.CancelFunc // 关闭方法
-	// *baseLink
+
 	_fd           net.Conn     // 套接字
 	_listenServer ListenServer // 归属的监听服务(todo 专门建立管理服务，不依赖于监听服务?)
 
