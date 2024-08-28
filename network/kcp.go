@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"time"
 
@@ -129,12 +130,15 @@ func (tl *KcpLink) Start() {
 		for {
 			select {
 			case <-tl.ctx.Done():
+				log.Println("tl.CloseCallBack()")
 				tl.CloseCallBack()
 				return
 			default:
 				data, err := tl.ReadPack()
 				if err != nil {
-					if netErr, ok := err.(net.Error); !ok || !netErr.Timeout() {
+					if err.Error() == "timeout" {
+						// 检查超时
+					} else {
 						tl.Close(DisConnectTypeBroken)
 					}
 				} else {
