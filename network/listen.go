@@ -9,6 +9,7 @@ import (
 
 	"github.com/shiimoo/godb/lib/base/errors"
 	"github.com/shiimoo/godb/lib/base/snowflake"
+	"github.com/xtaci/kcp-go"
 )
 
 type ListenServer interface {
@@ -50,13 +51,18 @@ func newBaseListenServer(parent context.Context, netType, address string) (*base
 	// @param address "0.0.0.0:8080"
 
 	serverObj := new(baseListenServer)
-	if netType != NetTypeWebSocket {
-		listener, err := net.Listen(netType, address)
-		if err != nil {
-			return nil, errors.NewErr(ErrCreateListenError, netType, address, err)
-		}
-		serverObj._listen = listener
+
+	var listener net.Listener
+	var err error
+	if netType == NetTypeTcp {
+		listener, err = net.Listen(netType, address)
+	} else if netType == NetTypeKcp {
+		listener, err = kcp.ListenWithOptions(address, nil, 10, 3)
 	}
+	if err != nil {
+		return nil, errors.NewErr(ErrCreateListenError, netType, address, err)
+	}
+	serverObj._listen = listener
 
 	// CREATE
 	serverObj.ctx, serverObj.cancel = context.WithCancel(parent)
