@@ -193,7 +193,7 @@ func (t *KcpListenServer) Start() {
 				// 监听链接
 				fd, err := t.GetListen().Accept()
 				if err != nil {
-					mlog.Warn(NetTypeTcp, "acceptTCP", err.Error())
+					mlog.Warn(NetTypeTcp, "acceptKCP", err.Error())
 				} else {
 					linkObj := NewKcpLink(t.Ctx(), t.NetType(), fd, t)
 					t.AddLink(linkObj)

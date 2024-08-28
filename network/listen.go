@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"strings"
 	"sync"
@@ -63,6 +64,7 @@ func newBaseListenServer(parent context.Context, netType, address string) (*base
 		return nil, errors.NewErr(ErrCreateListenError, netType, address, err)
 	}
 	serverObj._listen = listener
+	log.Println(netType, address)
 
 	// CREATE
 	serverObj.ctx, serverObj.cancel = context.WithCancel(parent)
